@@ -145,7 +145,7 @@ void free(void *ptr)
     }
 }
 
-void print_blocks()
+void print_blocks(void)
 {
     void *block_ptr = memory_pool;
     printf("-- start to print blocks --\n");
@@ -174,41 +174,3 @@ void print_block(void *block_ptr)
     }
     printf("\n\n");
 }
-
-void start_kernel(void)
-{
-    uart_init();
-    uart_puts("   ___ _   ______  ____\n");
-    uart_puts("  / _ \\ | / / __ \\/ __/\n");
-    uart_puts(" / , _/ |/ / /_/ /\\ \\  \n");
-    uart_puts("/_/|_||___/\\____/___/  \n\n");
-
-    page_init();
-    memory_init(); // 初始化内存管理
-
-    // 测试内存分配和释放
-    void *ptr1 = malloc(100); // 分配100字节
-    int *a = (int *)ptr1;
-    for (int i = 0; i < 10; i++)
-        *(a + i) = i;
-
-    print_block(ptr1);
-    void *ptr2 = malloc(200);                                     // 分配200字节
-    void *ptr3 = malloc((1024 * 1024 - 112 - 224 - 12 - 12 - 5)); // 分满
-    void *ptr4 = malloc(100);
-    print_blocks();
-
-    free(ptr1); // 释放ptr1指向的内存
-    free(ptr2); // 释放ptr2指向的内存
-    print_blocks();
-    free(ptr3);
-    free(ptr4);
-    print_blocks();
-    printf("program end\n");
-
-    while (1)
-    {
-    }; // stop here!
-}
-
-// 考虑到多线程安全和性能优化，需要进一步的设计和实现

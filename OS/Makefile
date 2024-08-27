@@ -1,23 +1,54 @@
-SECTIONS = \
-	00-bootstrap \
-	01-helloRVOS \
-	02-memanagement \
-	03-contextswitch \
-	04-multitask \
-	05-traps \
-	06-interrupts \
-	07-hwtimer \
-	08-preemptive \
-	09-lock \
-	10-swtimer \
-	11-syscall \
+include ../common.mk
+
+SRCS_ASM = \
+	start.S \
+	mem.S \
+	entry.S \
+
+SRCS_C = \
+	kernel.c \
+	uart.c \
+	printf.c \
+	page.c \
+	sched.c \
+	malloc.c \
+	user.c \
+
+OBJS = $(SRCS_ASM:.S=.o)
+OBJS += $(SRCS_C:.c=.o)
 
 .DEFAULT_GOAL := all
-all :
-	@echo "begin compile ALL exercises for assembly samples ......................."
-	for dir in $(SECTIONS); do $(MAKE) -C $$dir || exit "$$?"; done
-	@echo "compile ALL exercises finished successfully! ......"
+all: os.elf
+
+# start.o must be the first in dependency!
+os.elf: ${OBJS}
+	${CC} ${CFLAGS} -T os.ld -o os.elf $^
+	${OBJCOPY} -O binary os.elf os.bin
+
+%.o : %.c
+	${CC} ${CFLAGS} -c -o $@ $<
+
+%.o : %.S
+	${CC} ${CFLAGS} -c -o $@ $<
+
+run: all
+	@${QEMU} -M ? | grep virt >/dev/null || exit
+	@echo "Press Ctrl-A and then X to exit QEMU"
+	@echo "------------------------------------"
+	@${QEMU} ${QFLAGS} -kernel os.elf
+
+.PHONY : debug
+debug: all
+	@echo "Press Ctrl-C and then input 'quit' to exit GDB and QEMU"
+	@echo "-------------------------------------------------------"
+	@${QEMU} ${QFLAGS} -kernel os.elf -s -S &
+	@${GDB} os.elf -q -x ../gdbinit
+
+.PHONY : code
+code: all
+	@${OBJDUMP} -S os.elf | less
 
 .PHONY : clean
 clean:
-	for dir in $(SECTIONS); do $(MAKE) -C $$dir clean || exit "$$?"; done
+	rm -rf *.o *.bin *.elf
+

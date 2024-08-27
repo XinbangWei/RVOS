@@ -27,16 +27,15 @@ static uint32_t _num_pages = 0;
 #define PAGE_ORDER 12
 
 #define PAGE_TAKEN (uint8_t)(1 << 0)
-#define PAGE_LAST (uint8_t)(1 << 1)
+#define PAGE_LAST  (uint8_t)(1 << 1)
 
 /*
- * Page Descriptor
+ * Page Descriptor 
  * flags:
  * - bit 0: flag if this page is taken(allocated)
  * - bit 1: flag if this page is the last page of the memory block allocated
  */
-struct Page
-{
+struct Page {
 	uint8_t flags;
 };
 
@@ -47,12 +46,9 @@ static inline void _clear(struct Page *page)
 
 static inline int _is_free(struct Page *page)
 {
-	if (page->flags & PAGE_TAKEN)
-	{
+	if (page->flags & PAGE_TAKEN) {
 		return 0;
-	}
-	else
-	{
+	} else {
 		return 1;
 	}
 }
@@ -64,12 +60,9 @@ static inline void _set_flag(struct Page *page, uint8_t flags)
 
 static inline int _is_last(struct Page *page)
 {
-	if (page->flags & PAGE_LAST)
-	{
+	if (page->flags & PAGE_LAST) {
 		return 1;
-	}
-	else
-	{
+	} else {
 		return 0;
 	}
 }
@@ -85,18 +78,17 @@ static inline uint32_t _align_page(uint32_t address)
 
 void page_init()
 {
-	/*
+	/* 
 	 * We reserved 8 Page (8 x 4096) to hold the Page structures.
-	 * It should be enough to manage at most 128 MB (8 x 4096 x 4096)
+	 * It should be enough to manage at most 128 MB (8 x 4096 x 4096) 
 	 */
 	_num_pages = (HEAP_SIZE / PAGE_SIZE) - 8;
 	printf("HEAP_START = %x, HEAP_SIZE = %x, num of pages = %d\n", HEAP_START, HEAP_SIZE, _num_pages);
-
+	
 	struct Page *page = (struct Page *)HEAP_START;
-	for (int i = 0; i < _num_pages; i++)
-	{
+	for (int i = 0; i < _num_pages; i++) {
 		_clear(page);
-		page++;
+		page++;	
 	}
 
 	_alloc_start = _align_page(HEAP_START + 8 * PAGE_SIZE);
@@ -118,20 +110,16 @@ void *page_alloc(int npages)
 	/* Note we are searching the page descriptor bitmaps. */
 	int found = 0;
 	struct Page *page_i = (struct Page *)HEAP_START;
-	for (int i = 0; i <= (_num_pages - npages); i++)
-	{
-		if (_is_free(page_i))
-		{
+	for (int i = 0; i <= (_num_pages - npages); i++) {
+		if (_is_free(page_i)) {
 			found = 1;
-			/*
+			/* 
 			 * meet a free page, continue to check if following
 			 * (npages - 1) pages are also unallocated.
 			 */
 			struct Page *page_j = page_i + 1;
-			for (int j = i + 1; j < (i + npages); j++)
-			{
-				if (!_is_free(page_j))
-				{
+			for (int j = i + 1; j < (i + npages); j++) {
+				if (!_is_free(page_j)) {
 					found = 0;
 					break;
 				}
@@ -142,11 +130,9 @@ void *page_alloc(int npages)
 			 * take housekeeping, then return the actual start
 			 * address of the first page of this memory block
 			 */
-			if (found)
-			{
+			if (found) {
 				struct Page *page_k = page_i;
-				for (int k = i; k < (i + npages); k++)
-				{
+				for (int k = i; k < (i + npages); k++) {
 					_set_flag(page_k, PAGE_TAKEN);
 					page_k++;
 				}
@@ -169,26 +155,20 @@ void page_free(void *p)
 	/*
 	 * Assert (TBD) if p is invalid
 	 */
-	if (!p || (uint32_t)p >= _alloc_end)
-	{
+	if (!p || (uint32_t)p >= _alloc_end) {
 		return;
 	}
 	/* get the first page descriptor of this memory block */
 	struct Page *page = (struct Page *)HEAP_START;
-	page += ((uint32_t)p - _alloc_start) / PAGE_SIZE;
+	page += ((uint32_t)p - _alloc_start)/ PAGE_SIZE;
 	/* loop and clear all the page descriptors of the memory block */
-	while (!_is_free(page))
-	{
-		if (_is_last(page))
-		{
+	while (!_is_free(page)) {
+		if (_is_last(page)) {
 			_clear(page);
 			break;
-		}
-		else
-		{
+		} else {
 			_clear(page);
-			page++;
-			;
+			page++;;
 		}
 	}
 }
@@ -197,7 +177,7 @@ void page_test()
 {
 	void *p = page_alloc(2);
 	printf("p = 0x%x\n", p);
-	// page_free(p);
+	//page_free(p);
 
 	void *p2 = page_alloc(7);
 	printf("p2 = 0x%x\n", p2);
@@ -206,3 +186,4 @@ void page_test()
 	void *p3 = page_alloc(4);
 	printf("p3 = 0x%x\n", p3);
 }
+
