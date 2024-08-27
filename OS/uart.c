@@ -1,7 +1,7 @@
 #include "os.h"
 
 /*
- * The UART control registers are memory-mapped at address UART0.
+ * The UART control registers are memory-mapped at address UART0. 
  * This macro returns the address of one of the registers.
  */
 #define UART_REG(reg) ((volatile uint8_t *)(UART0 + reg))
@@ -17,18 +17,18 @@
  * 0 (write mode): THR/DLL
  * 1 (write mode): IER/DLM
  */
-#define RHR 0 // Receive Holding Register (read mode)
-#define THR 0 // Transmit Holding Register (write mode)
-#define DLL 0 // LSB of Divisor Latch (write mode)
-#define IER 1 // Interrupt Enable Register (write mode)
-#define DLM 1 // MSB of Divisor Latch (write mode)
-#define FCR 2 // FIFO Control Register (write mode)
-#define ISR 2 // Interrupt Status Register (read mode)
-#define LCR 3 // Line Control Register
-#define MCR 4 // Modem Control Register
-#define LSR 5 // Line Status Register
-#define MSR 6 // Modem Status Register
-#define SPR 7 // ScratchPad Register
+#define RHR 0	// Receive Holding Register (read mode)
+#define THR 0	// Transmit Holding Register (write mode)
+#define DLL 0	// LSB of Divisor Latch (write mode)
+#define IER 1	// Interrupt Enable Register (write mode)
+#define DLM 1	// MSB of Divisor Latch (write mode)
+#define FCR 2	// FIFO Control Register (write mode)
+#define ISR 2	// Interrupt Status Register (read mode)
+#define LCR 3	// Line Control Register
+#define MCR 4	// Modem Control Register
+#define LSR 5	// Line Status Register
+#define MSR 6	// Modem Status Register
+#define SPR 7	// ScratchPad Register
 
 /*
  * POWER UP DEFAULTS
@@ -61,7 +61,7 @@
  * ......
  */
 #define LSR_RX_READY (1 << 0)
-#define LSR_TX_IDLE (1 << 5)
+#define LSR_TX_IDLE  (1 << 5)
 
 #define uart_read_reg(reg) (*(UART_REG(reg)))
 #define uart_write_reg(reg, v) (*(UART_REG(reg)) = (v))
@@ -106,23 +106,14 @@ void uart_init()
 
 int uart_putc(char ch)
 {
-	while ((uart_read_reg(LSR) & LSR_TX_IDLE) == 0)
-		;
+	while ((uart_read_reg(LSR) & LSR_TX_IDLE) == 0);
 	return uart_write_reg(THR, ch);
 }
 
 void uart_puts(char *s)
 {
-	while (*s)
-	{
+	while (*s) {
 		uart_putc(*s++);
 	}
 }
 
-// 实现uart_getc函数
-char uart_getc(void)
-{
-	while ((uart_read_reg(LSR) & LSR_RX_READY) == 0)
-		;					   // 等待直到接收数据准备好
-	return uart_read_reg(RHR); // 读取并返回接收到的字符
-}
