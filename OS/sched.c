@@ -12,7 +12,7 @@ extern void switch_to(struct context *next);
  * is always 16-byte aligned.
  */
 uint8_t __attribute__((aligned(16))) task_stack[MAX_TASKS][STACK_SIZE];
-uint8_t __attribute__((aligned(16))) kernel_stack[KERNEL_STACK_SIZE];
+//uint8_t __attribute__((aligned(16))) kernel_stack[KERNEL_STACK_SIZE];
 task_t tasks[MAX_TASKS];
 struct context kernel_ctx;
 
@@ -44,7 +44,7 @@ void schedule()
 {
 	if (_top <= 0)
 	{
-		panic("Num of task should be greater than zero!");
+		//panic("Num of task should be greater than zero!");
 		return;
 	}
 
@@ -115,22 +115,23 @@ void schedule()
  *  0: success
  *  -1: if error occurred
  */
-int task_create(void (*start_routin)(void *param), void *param, uint8_t priority)
+int task_create(void (*start_routin)(void *param), void *param, uint8_t priority, uint32_t timeslice)
 {
-	if (_top < MAX_TASKS)
-	{
-		tasks[_top].ctx.sp = (reg_t)&task_stack[_top][STACK_SIZE];
-		tasks[_top].ctx.ra = (reg_t)start_routin;
-		tasks[_top].ctx.a0 = (reg_t)param;
-		tasks[_top].priority = priority;
-		tasks[_top].valid = 1;
-		_top++;
-		return 0;
-	}
-	else
+	if (_top >= MAX_TASKS)
 	{
 		return -1;
 	}
+
+	tasks[_top].ctx.sp = (reg_t)&task_stack[_top][STACK_SIZE];
+	tasks[_top].ctx.ra = (reg_t)start_routin;
+	tasks[_top].param = param;
+	tasks[_top].priority = priority;
+	tasks[_top].valid = 1;
+	tasks[_top].timeslice = timeslice;
+	tasks[_top].remaining_timeslice = timeslice;
+
+	_top++;
+	return 0;
 }
 
 /*

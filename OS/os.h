@@ -63,9 +63,11 @@ typedef struct
 	void *param;
 	uint8_t priority;
 	uint8_t valid;
+	uint32_t timeslice;
+	uint32_t remaining_timeslice;
 } task_t;
 
-extern int task_create(void (*task)(void *param), void *param, uint8_t priority);
+extern int task_create(void (*start_routin)(void *param), void *param, uint8_t priority, uint32_t timeslice);
 extern void task_delay(volatile int count);
 extern void task_yield();
 extern void task_exit();
