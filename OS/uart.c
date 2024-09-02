@@ -117,3 +117,24 @@ void uart_puts(char *s)
 	}
 }
 
+int uart_getc(void)
+{
+	if (uart_read_reg(LSR) & LSR_RX_READY){
+		return uart_read_reg(RHR);
+	} else {
+		return -1;
+	}
+}
+
+void uart_isr(void)
+{
+	while (1) {
+		int c = uart_getc();
+		if (c == -1) {
+			break;
+		} else {
+			uart_putc((char)c);
+			uart_putc('\n');
+		}
+	}
+}

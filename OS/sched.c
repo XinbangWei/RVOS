@@ -23,11 +23,6 @@ struct context kernel_ctx;
 static int _top = 0;
 static int _current = -1;
 
-static void w_mscratch(reg_t x)
-{
-	asm volatile("csrw mscratch, %0" : : "r"(x));
-}
-
 void sched_init()
 {
 	w_mscratch((reg_t)&kernel_ctx);

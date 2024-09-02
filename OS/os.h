@@ -2,6 +2,7 @@
 #define __OS_H__
 
 #include "types.h"
+#include "riscv.h"
 #include "platform.h"
 
 #include <stddef.h>
@@ -80,5 +81,9 @@ extern void *malloc(size_t );
 extern void free(void *);
 extern void print_blocks(void);
 extern void print_block(void *);
+
+extern int plic_claim(void);
+extern void plic_complete(int irq);
+
 
 #endif /* __OS_H__ */
