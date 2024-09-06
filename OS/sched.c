@@ -12,7 +12,7 @@ extern void switch_to(struct context *next);
  * is always 16-byte aligned.
  */
 uint8_t __attribute__((aligned(16))) task_stack[MAX_TASKS][STACK_SIZE];
-//uint8_t __attribute__((aligned(16))) kernel_stack[KERNEL_STACK_SIZE];
+uint8_t __attribute__((aligned(16))) kernel_stack[KERNEL_STACK_SIZE];
 task_t tasks[MAX_TASKS];
 struct context kernel_ctx;
 
@@ -27,9 +27,14 @@ void sched_init()
 {
 	w_mscratch((reg_t)&kernel_ctx);
 
+	// w_mscratch(0);
+
+	/* enable machine-mode software interrupts. */
+	w_mie(r_mie() | MIE_MSIE);
+
 	// Initialize kernel scheduler task context 是将ms寄存器的地址写入ctx，因此不需要初始化，自有寄存器帮我写内容
-	//kernel_ctx.sp = (reg_t)&kernel_stack[KERNEL_STACK_SIZE];
-	//kernel_ctx.ra = (reg_t)kernel_scheduler;
+	kernel_ctx.sp = (reg_t)&kernel_stack[KERNEL_STACK_SIZE];
+	kernel_ctx.pc = (reg_t)kernel_scheduler;
 }
 
 void back_to_os(void)
@@ -105,6 +110,16 @@ void schedule()
 	switch_to(next);
 }
 
+void check_timeslice()
+{
+	tasks[_current].remaining_timeslice--;
+	if (tasks[_current].remaining_timeslice == 0)
+	{
+		tasks[_current].remaining_timeslice = tasks[_current].timeslice;
+		task_yield();
+	}
+}
+
 /*
  * DESCRIPTION
  *  Create a task.
@@ -123,7 +138,7 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
 	}
 
 	tasks[_top].ctx.sp = (reg_t)&task_stack[_top][STACK_SIZE];
-	tasks[_top].ctx.ra = (reg_t)start_routin;
+	tasks[_top].ctx.pc = (reg_t)start_routin;
 	tasks[_top].param = param;
 	tasks[_top].priority = priority;
 	tasks[_top].valid = 1;
@@ -141,7 +156,10 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
  */
 void task_yield()
 {
-	back_to_os();
+	// back_to_os();
+	/* trigger a machine-level software interrupt */
+	int id = r_mhartid();
+	*(uint32_t*)CLINT_MSIP(id) = 1;	
 }
 
 /*
@@ -171,7 +189,8 @@ void kernel_scheduler()
 {
 	while (1)
 	{
+		uart_puts("kernel_scheduler check\n");
 		// Kernel scheduler task does nothing, just yields to the next task
-		task_yield();
+		schedule();
 	}
 }

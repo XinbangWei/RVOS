@@ -55,6 +55,10 @@ struct context
 	reg_t t4;
 	reg_t t5;
 	reg_t t6;
+	// upon is trap frame
+
+	// save the pc to run in next schedule cycle
+	reg_t pc; // offset: 31 *4 = 124
 };
 
 typedef struct
@@ -76,7 +80,8 @@ extern void task_exit();
 extern void sched_init(void);
 extern void schedule(void);
 extern void kernel_scheduler(void);
-
+extern void back_to_os(void);
+extern void check_timeslice(void);
 extern void *memset(void *, int , size_t );
 extern void memory_init(void);
 extern void *malloc(size_t );

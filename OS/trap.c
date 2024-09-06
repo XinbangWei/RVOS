@@ -3,6 +3,7 @@
 extern void trap_vector(void);
 extern void uart_isr(void);
 extern void timer_handler(void);
+extern void schedule(void);
 
 void trap_init()
 {
@@ -37,6 +38,16 @@ reg_t trap_handler(reg_t epc, reg_t cause)
 		switch (cause_code) {
 		case 3:
 			uart_puts("software interruption!\n");
+			/*
+			 * acknowledge the software interrupt by clearing
+    			 * the MSIP bit in mip.
+			 */
+			int id = r_mhartid();
+    			*(uint32_t*)CLINT_MSIP(id) = 0;
+
+			// schedule();
+			back_to_os();
+
 			break;
 		case 7:
 			uart_puts("timer interruption!");
@@ -58,22 +69,5 @@ reg_t trap_handler(reg_t epc, reg_t cause)
 	}
 
 	return return_pc;
-}
-
-void trap_test()
-{
-	/*
-	 * Synchronous exception code = 7
-	 * Store/AMO access fault
-	 */
-	*(int *)0x00000000 = 100;
-
-	/*
-	 * Synchronous exception code = 5
-	 * Load access fault
-	 */
-	//int a = *(int *)0x00000000;
-
-	uart_puts("Yeah! I'm return back from trap!\n");
 }
 

@@ -22,9 +22,9 @@ void start_kernel(void)
 
     trap_init();
 
-	plic_init();
+    plic_init();
 
-	timer_init();
+    timer_init();
 
     sched_init();
 
@@ -34,10 +34,8 @@ void start_kernel(void)
 
     while (1)
     {
-    	schedule();
-    	//printf("this is kernel running...");
+        schedule();
     }
-
     uart_puts("Would not go here!\n");
     while (1)
     {
