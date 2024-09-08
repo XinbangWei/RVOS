@@ -64,7 +64,7 @@ struct context
 typedef struct
 {
 	struct context ctx;
-	void *param;
+	//void *param;
 	uint8_t priority;
 	uint8_t valid;
 	uint32_t timeslice;
@@ -92,5 +92,7 @@ extern void print_block(void *);
 extern int plic_claim(void);
 extern void plic_complete(int irq);
 
+extern int spin_lock(void);
+extern int spin_unlock(void);
 
 #endif /* __OS_H__ */

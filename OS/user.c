@@ -22,10 +22,30 @@ void user_task1(void *param)
 	}
 }
 
+void user_task(void *param)
+{
+	int task_id = (int)param;
+	printf("Task %d: Created!\n", task_id);
+	int iter_cnt = task_id;
+	while (1)
+	{
+		printf("Task %d: Running...\n", task_id);
+		task_delay(DELAY);
+		if (iter_cnt-- == 0)
+		{
+			break;
+		}
+	}
+	printf("Task %d: Finished!\n", task_id);
+	task_exit();
+}
+
 /* NOTICE: DON'T LOOP INFINITELY IN main() */
 void os_main(void)
 {
     // 创建任务
     task_create(user_task0, NULL, 255, 10);
     task_create(user_task1, NULL, 255, 10);
+	task_create(user_task, (void *)2, 0, 10);
+	task_create(user_task, (void *)3, 0, 10);
 }
