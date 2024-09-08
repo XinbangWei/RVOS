@@ -16,6 +16,7 @@ SRCS_C = \
 	trap.c \
 	plic.c \
 	timer.c \
+	lock.c \
 
 OBJS = $(SRCS_ASM:.S=.o)
 OBJS += $(SRCS_C:.c=.o)
@@ -51,7 +52,11 @@ debug: all
 code: all
 	@${OBJDUMP} -S os.elf | less
 
+.PHONY : txt
+txt: all
+	@${OBJDUMP} -S os.elf > os.txt
+
 .PHONY : clean
 clean:
-	rm -rf *.o *.bin *.elf
+	rm -rf *.o *.bin *.elf os.txt
 

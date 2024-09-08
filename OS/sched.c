@@ -47,9 +47,10 @@ void back_to_os(void)
  */
 void schedule()
 {
+	spin_lock();
 	if (_top <= 0)
 	{
-		//panic("Num of task should be greater than zero!");
+		// panic("Num of task should be greater than zero!");
 		return;
 	}
 
@@ -95,9 +96,9 @@ void schedule()
 		return;
 	}
 
-	//if (next_task == _current)
+	// if (next_task == _current)
 	{
-		//return;这段代码会导致函数返回到kernel中并继续反复调用调度函数，造成死循环
+		// return;这段代码会导致函数返回到kernel中并继续反复调用调度函数，造成死循环
 	}
 
 	_current = next_task;
@@ -108,6 +109,7 @@ void schedule()
 
 	// Kernel scheduler task will switch to the next task
 	switch_to(next);
+	spin_unlock();
 }
 
 void check_timeslice()
@@ -132,20 +134,24 @@ void check_timeslice()
  */
 int task_create(void (*start_routin)(void *param), void *param, uint8_t priority, uint32_t timeslice)
 {
+	spin_lock();
 	if (_top >= MAX_TASKS)
 	{
+		spin_unlock();
 		return -1;
 	}
 
 	tasks[_top].ctx.sp = (reg_t)&task_stack[_top][STACK_SIZE];
 	tasks[_top].ctx.pc = (reg_t)start_routin;
-	tasks[_top].param = param;
+	tasks[_top].ctx.a0 = param;
 	tasks[_top].priority = priority;
 	tasks[_top].valid = 1;
 	tasks[_top].timeslice = timeslice;
 	tasks[_top].remaining_timeslice = timeslice;
 
 	_top++;
+
+	spin_unlock();
 	return 0;
 }
 
@@ -156,10 +162,11 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
  */
 void task_yield()
 {
+	schedule();
 	// back_to_os();
 	/* trigger a machine-level software interrupt */
-	int id = r_mhartid();
-	*(uint32_t*)CLINT_MSIP(id) = 1;	
+	// int id = r_mhartid();
+	//*(uint32_t*)CLINT_MSIP(id) = 1;
 }
 
 /*
@@ -171,7 +178,9 @@ void task_exit()
 	if (_current != -1)
 	{
 		tasks[_current].valid = 0;
-		back_to_os();
+		// back_to_os();
+		int id = r_mhartid();
+		*(uint32_t *)CLINT_MSIP(id) = 1;
 	}
 }
 
@@ -180,9 +189,11 @@ void task_exit()
  */
 void task_delay(volatile int count)
 {
+	spin_lock();
 	count *= 50000;
 	while (count--)
 		;
+	spin_unlock();
 }
 
 void kernel_scheduler()
