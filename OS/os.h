@@ -59,19 +59,22 @@ struct context
 
 	// save the pc to run in next schedule cycle
 	reg_t pc; // offset: 31 *4 = 124
+	reg_t mstatus; // 新增字段，用于保存 mstatus 寄存器
 };
 
 typedef struct
 {
 	struct context ctx;
-	//void *param;
+	void *param;
 	uint8_t priority;
 	uint8_t valid;
 	uint32_t timeslice;
 	uint32_t remaining_timeslice;
 } task_t;
 
-extern int task_create(void (*start_routin)(void *param), void *param, uint8_t priority, uint32_t timeslice);
+#define SCHEDULE {int id = r_mhartid();*(uint32_t*)CLINT_MSIP(id) = 1;}
+
+extern int task_create(void (*start_routin)(void *param), void *param, uint8_t priority);
 extern void task_delay(volatile int count);
 extern void task_yield();
 extern void task_exit();
