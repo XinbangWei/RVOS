@@ -43,9 +43,10 @@ void user_task(void *param)
 /* NOTICE: DON'T LOOP INFINITELY IN main() */
 void os_main(void)
 {
-    // 创建任务
-    task_create(user_task0, NULL, 255, 10);
-    task_create(user_task1, NULL, 255, 10);
-	task_create(user_task, (void *)2, 0, 10);
-	task_create(user_task, (void *)3, 0, 10);
+    // 创建内核调度任务已经在 `sched_init` 中完成
+    // 创建用户任务
+    task_create(user_task0, NULL, 128); // 优先级 1
+    task_create(user_task1, NULL, 128); // 优先级 2
+    task_create(user_task, (void *)2, 3); // 优先级 3
+    task_create(user_task, (void *)3, 3); // 优先级 3
 }

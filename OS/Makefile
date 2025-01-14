@@ -1,5 +1,11 @@
 include ../common.mk
 
+# Define the build directory
+BUILD_DIR = build
+
+# Create the build directory if it doesn't exist
+$(shell mkdir -p $(BUILD_DIR))
+
 SRCS_ASM = \
 	start.S \
 	mem.S \
@@ -18,45 +24,47 @@ SRCS_C = \
 	timer.c \
 	lock.c \
 
-OBJS = $(SRCS_ASM:.S=.o)
-OBJS += $(SRCS_C:.c=.o)
+# Modify the object files to be placed in the build directory
+OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS_ASM:.S=.o))
+OBJS += $(addprefix $(BUILD_DIR)/, $(SRCS_C:.c=.o))
 
 .DEFAULT_GOAL := all
-all: os.elf
+
+all: $(BUILD_DIR)/os.elf
 
 # start.o must be the first in dependency!
-os.elf: ${OBJS}
-	${CC} ${CFLAGS} -T os.ld -o os.elf $^
-	${OBJCOPY} -O binary os.elf os.bin
+$(BUILD_DIR)/os.elf: ${OBJS}
+	${CC} ${CFLAGS} -T os.ld -o $@ $^
+	${OBJCOPY} -O binary $@ $(BUILD_DIR)/os.bin
 
-%.o : %.c
+$(BUILD_DIR)/%.o : %.c
 	${CC} ${CFLAGS} -c -o $@ $<
 
-%.o : %.S
+$(BUILD_DIR)/%.o : %.S
 	${CC} ${CFLAGS} -c -o $@ $<
 
 run: all
 	@${QEMU} -M ? | grep virt >/dev/null || exit
 	@echo "Press Ctrl-A and then X to exit QEMU"
 	@echo "------------------------------------"
-	@${QEMU} ${QFLAGS} -kernel os.elf
+	@${QEMU} ${QFLAGS} -kernel $(BUILD_DIR)/os.elf
 
 .PHONY : debug
 debug: all
 	@echo "Press Ctrl-C and then input 'quit' to exit GDB and QEMU"
 	@echo "-------------------------------------------------------"
-	@${QEMU} ${QFLAGS} -kernel os.elf -s -S &
-	@${GDB} os.elf -q -x ../gdbinit
+	@${QEMU} ${QFLAGS} -kernel $(BUILD_DIR)/os.elf -s -S &
+	@${GDB} $(BUILD_DIR)/os.elf -q -x ../gdbinit
 
 .PHONY : code
 code: all
-	@${OBJDUMP} -S os.elf | less
+	@${OBJDUMP} -S $(BUILD_DIR)/os.elf | less
 
 .PHONY : txt
 txt: all
-	@${OBJDUMP} -S os.elf > os.txt
+	@${OBJDUMP} -S $(BUILD_DIR)/os.elf > os.txt
 
 .PHONY : clean
 clean:
-	rm -rf *.o *.bin *.elf os.txt
-
+	rm -rf $(BUILD_DIR)
+	rm -rf os.txt
