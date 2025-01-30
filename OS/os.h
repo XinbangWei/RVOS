@@ -58,24 +58,50 @@ struct context
 	// upon is trap frame
 
 	// save the pc to run in next schedule cycle
-	reg_t pc; // offset: 31 *4 = 124
+	reg_t pc;	   // offset: 31 *4 = 124
 	reg_t mstatus; // 新增字段，用于保存 mstatus 寄存器
 };
+
+typedef enum
+{
+	TASK_INVALID,
+	TASK_READY,
+	TASK_RUNNING,
+	TASK_SLEEPING,
+	TASK_EXITED
+} task_state;
 
 typedef struct
 {
 	struct context ctx;
 	void *param;
 	uint8_t priority;
-	uint8_t valid;
+	task_state state;
 	uint32_t timeslice;
 	uint32_t remaining_timeslice;
 } task_t;
 
-#define SCHEDULE {int id = r_mhartid();*(uint32_t*)CLINT_MSIP(id) = 1;}
+#define DEFAULT_TIMESLICE 2
 
-extern int task_create(void (*start_routin)(void *param), void *param, uint8_t priority);
-extern void task_delay(volatile int count);
+typedef struct timer
+{
+	void (*func)(void *arg);
+	void *arg;
+	uint32_t timeout_tick;
+	struct timer *next;
+} timer;
+
+extern timer *timers, *next_timer;
+extern uint32_t mtime_base; // CLINT_MTIME 的基准值
+
+#define SCHEDULE                         \
+	{                                    \
+		int id = r_mhartid();            \
+		*(uint32_t *)CLINT_MSIP(id) = 1; \
+	}
+
+extern int task_create(void (*start_routin)(void *param), void *param, uint8_t priority, uint32_t timeslice);
+extern void task_delay(uint32_t count);
 extern void task_yield();
 extern void task_exit();
 
@@ -85,9 +111,9 @@ extern void schedule(void);
 extern void kernel_scheduler(void);
 extern void back_to_os(void);
 extern void check_timeslice(void);
-extern void *memset(void *, int , size_t );
+extern void *memset(void *, int, size_t);
 extern void memory_init(void);
-extern void *malloc(size_t );
+extern void *malloc(size_t);
 extern void free(void *);
 extern void print_blocks(void);
 extern void print_block(void *);
@@ -97,5 +123,11 @@ extern void plic_complete(int irq);
 
 extern int spin_lock(void);
 extern int spin_unlock(void);
+
+extern timer *timer_create(
+	void (*handler)(void *arg),
+	void *arg,
+	uint32_t timeout);
+extern void timer_delete(timer *timer);
 
 #endif /* __OS_H__ */

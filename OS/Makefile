@@ -16,13 +16,14 @@ SRCS_C = \
 	uart.c \
 	printf.c \
 	page.c \
-	sched.c \
+	task.c \
 	malloc.c \
 	user.c \
 	trap.c \
 	plic.c \
 	timer.c \
 	lock.c \
+	algorithm.c \
 
 # Modify the object files to be placed in the build directory
 OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS_ASM:.S=.o))

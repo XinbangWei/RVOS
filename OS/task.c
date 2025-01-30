@@ -6,7 +6,6 @@ extern void switch_to(struct context *next);
 #define MAX_TASKS 10
 #define STACK_SIZE 1024 * 1024
 #define KERNEL_STACK_SIZE 1024 * 1024
-#define DEFAULT_TIMESLICE 10
 
 /*
  * In the standard RISC-V calling convention, the stack pointer sp
@@ -69,7 +68,7 @@ void schedule()
 	// 找到最高优先级
 	for (int i = 0; i < _top; i++)
 	{
-		if (tasks[i].valid && tasks[i].priority < highest_priority)
+		if (tasks[i].state == TASK_READY && tasks[i].priority < highest_priority)
 		{
 			highest_priority = tasks[i].priority;
 		}
@@ -79,7 +78,7 @@ void schedule()
 	for (int i = 0; i < _top; i++)
 	{
 		int idx = (_current + 1 + i) % _top;
-		if (tasks[idx].valid && tasks[idx].priority == highest_priority)
+		if (tasks[idx].state == TASK_READY && tasks[idx].priority == highest_priority)
 		{
 			next_task = idx;
 			break;
@@ -90,7 +89,7 @@ void schedule()
 	{
 		for (int i = 0; i < MAX_TASKS; i++)
 		{
-			if (tasks[i].priority == highest_priority)
+			if (tasks[i].state == TASK_READY && tasks[i].priority == highest_priority)
 			{
 				next_task = i;
 				break;
@@ -108,6 +107,7 @@ void schedule()
 	_current = next_task;
 	struct context *next = &(tasks[_current].ctx);
 
+	tasks[_current].state = TASK_RUNNING;
 	switch_to(next);
 	spin_unlock();
 }
@@ -132,7 +132,7 @@ void check_timeslice()
  *  0: success
  *  -1: if error occurred
  */
-int task_create(void (*start_routin)(void *param), void *param, uint8_t priority)
+int task_create(void (*start_routin)(void *param), void *param, uint8_t priority, uint32_t timeslice)
 {
 	spin_lock();
 	if (_top >= MAX_TASKS)
@@ -144,14 +144,14 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
 	tasks[_top].ctx.sp = (reg_t)&task_stack[_top][STACK_SIZE] & ~0xF;
 	tasks[_top].ctx.pc = (reg_t)start_routin;
 	tasks[_top].ctx.a0 = param;
-	// 初始化 mstatus 为机器模式
-	tasks[_top].ctx.mstatus = (3 << 11) | (1 << 7); // MPP = 3 (机器模式), MPIE = 1
+	// 初始化 mstatus 为用户模式，以防后续任务切换时出错
+	tasks[_top].ctx.mstatus = (0 << 11) | (1 << 7); // MPP = 3 (机器模式), MPIE = 1
 
 	// 其他初始化代码...
 	tasks[_top].priority = priority;
-	tasks[_top].valid = 1;
-	tasks[_top].timeslice = DEFAULT_TIMESLICE;
-	tasks[_top].remaining_timeslice = DEFAULT_TIMESLICE;
+	tasks[_top].state = TASK_READY;
+	tasks[_top].timeslice = timeslice;
+	tasks[_top].remaining_timeslice = timeslice;
 
 	printf("创建任务: %p\n", (void *)tasks[_top].ctx.pc);
 
@@ -181,7 +181,7 @@ void task_exit()
 	spin_lock();
 	if (_current != -1)
 	{
-		tasks[_current].valid = 0;
+		tasks[_current].state = TASK_EXITED;
 		uart_puts("任务已退出，并被调度器回收。\n");
 	}
 	spin_unlock();
@@ -189,14 +189,47 @@ void task_exit()
 	// 如果所有任务都退出，内核可以进入空闲状态或重新启动
 	panic("所有任务已退出，系统终止。");
 }
-/*
- * a very rough implementation, just to consume the cpu
- */
-void task_delay(volatile int count)
+
+// 定时器回调函数，用于唤醒被延迟的任务
+void wake_up_task(void *arg)
 {
-	spin_lock();
-	count *= 50000;
-	while (count--)
-		;
-	spin_unlock();
+    int task_id = (int)arg;
+
+    spin_lock();
+    if (task_id >= 0 && task_id < MAX_TASKS && tasks[task_id].state == TASK_SLEEPING)
+    {
+        tasks[task_id].state = TASK_READY;
+    }
+    spin_unlock();
+}
+
+/*
+ * DESCRIPTION
+ *  task_delay() causes the calling task to sleep for a specified number of ticks.
+ *  - ticks: 延迟的时钟周期数
+ */
+void task_delay(uint32_t ticks)
+{
+    spin_lock();
+    if (_current == -1)
+    {
+        spin_unlock();
+        return;
+    }
+
+    int task_id = _current;
+    tasks[task_id].state = TASK_SLEEPING;
+    spin_unlock();
+
+    // 创建定时器，ticks 后调用 wake_up_task 以唤醒任务
+    if (timer_create(wake_up_task, (void *)task_id, ticks) == NULL)
+    {
+        // 定时器创建失败，恢复任务状态为就绪
+        spin_lock();
+        tasks[task_id].state = TASK_READY;
+        spin_unlock();
+    }
+
+    // 让出 CPU，触发调度
+    task_yield();
 }

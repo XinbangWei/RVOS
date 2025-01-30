@@ -1,6 +1,6 @@
 #include "os.h"
 
-#define DELAY 1000
+#define DELAY 1
 
 void user_task0(void *param)
 {
@@ -43,10 +43,10 @@ void user_task(void *param)
 /* NOTICE: DON'T LOOP INFINITELY IN main() */
 void os_main(void)
 {
-    // 创建内核调度任务已经在 `sched_init` 中完成
-    // 创建用户任务
-    task_create(user_task0, NULL, 128); // 优先级 1
-    task_create(user_task1, NULL, 128); // 优先级 2
-    task_create(user_task, (void *)2, 3); // 优先级 3
-    task_create(user_task, (void *)3, 3); // 优先级 3
+	// 创建内核调度任务已经在 `sched_init` 中完成
+	// 创建用户任务
+	task_create(user_task0, NULL, 128, DEFAULT_TIMESLICE);	  // 优先级 1
+	task_create(user_task1, NULL, 128, DEFAULT_TIMESLICE);	  // 优先级 2
+	task_create(user_task, (void *)2, 3, DEFAULT_TIMESLICE); // 优先级 3
+	task_create(user_task, (void *)3, 3, DEFAULT_TIMESLICE); // 优先级 3
 }
