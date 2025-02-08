@@ -51,5 +51,5 @@ void os_main(void)
 	task_create(user_task, (void *)2, 3, DEFAULT_TIMESLICE); // 优先级 3
 	task_create(user_task, (void *)3, 3, DEFAULT_TIMESLICE); // 优先级 3
     printf("current time:%d\n",get_mtime());
-	printf("timer expired: %d\n", timers->timeout_tick);
+	//printf("timer expired: %d\n", timers->timeout_tick);
 }

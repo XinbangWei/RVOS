@@ -141,6 +141,8 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
 		return -1;
 	}
 
+	tasks[_top].func = start_routin;
+	tasks[_top].param = param;
 	tasks[_top].ctx.sp = (reg_t)&task_stack[_top][STACK_SIZE] & ~0xF;
 	tasks[_top].ctx.pc = (reg_t)start_routin;
 	tasks[_top].ctx.a0 = param;
@@ -193,14 +195,14 @@ void task_exit()
 // 定时器回调函数，用于唤醒被延迟的任务
 void wake_up_task(void *arg)
 {
-    int task_id = (int)arg;
+	int task_id = (int)arg;
 
-    spin_lock();
-    if (task_id >= 0 && task_id < MAX_TASKS && tasks[task_id].state == TASK_SLEEPING)
-    {
-        tasks[task_id].state = TASK_READY;
-    }
-    spin_unlock();
+	spin_lock();
+	if (task_id >= 0 && task_id < MAX_TASKS && tasks[task_id].state == TASK_SLEEPING)
+	{
+		tasks[task_id].state = TASK_READY;
+	}
+	spin_unlock();
 }
 
 /*
@@ -210,26 +212,93 @@ void wake_up_task(void *arg)
  */
 void task_delay(uint32_t ticks)
 {
-    spin_lock();
-    if (_current == -1)
-    {
-        spin_unlock();
-        return;
-    }
+	spin_lock();
+	if (_current == -1)
+	{
+		spin_unlock();
+		return;
+	}
 
-    int task_id = _current;
-    tasks[task_id].state = TASK_SLEEPING;
-    spin_unlock();
+	int task_id = _current;
+	tasks[task_id].state = TASK_SLEEPING;
+	spin_unlock();
 
-    // 创建定时器，ticks 后调用 wake_up_task 以唤醒任务
-    if (timer_create(wake_up_task, (void *)task_id, ticks) == NULL)
-    {
-        // 定时器创建失败，恢复任务状态为就绪
-        spin_lock();
-        tasks[task_id].state = TASK_READY;
-        spin_unlock();
-    }
+	// 创建定时器，ticks 后调用 wake_up_task 以唤醒任务
+	if (timer_create(wake_up_task, (void *)task_id, ticks) == NULL)
+	{
+		// 定时器创建失败，恢复任务状态为就绪
+		spin_lock();
+		tasks[task_id].state = TASK_READY;
+		spin_unlock();
+	}
 
-    // 让出 CPU，触发调度
-    task_yield();
+	// 让出 CPU，触发调度
+	task_yield();
+}
+
+/* 获取任务函数名称 */
+static const char *get_task_func_name(void (*func)(void *))
+{
+	if (func == user_task0)
+		return "user_task0";
+	if (func == user_task1)
+		return "user_task1";
+	if (func == user_task)
+		return "user_task";
+	if (func == timer_handler)
+		return "timer_handler";
+	if (func == task_yield)
+		return "task_yield";
+	return "unknown";
+}
+
+/* 打印任务槽信息的调试函数 */
+void print_tasks(void)
+{
+	printf("\n=== Tasks Debug Info ===\n");
+
+	int active_tasks = 0;
+	for (int i = 0; i < MAX_TASKS; i++)
+	{
+		if (tasks[i].state != TASK_INVALID)
+		{
+			printf("Task[%d]:\n", i);
+			printf("  Function: %s\n", get_task_func_name(tasks[i].func));
+			if (tasks[i].func == user_task)
+			{
+				int task_id = (int)(tasks[i].param);
+				printf("  Task ID: %d\n", task_id);
+			}
+			printf("  Priority: %d\n", tasks[i].priority);
+
+			const char *state_str;
+			switch (tasks[i].state)
+			{
+			case TASK_READY:
+				state_str = "READY";
+				break;
+			case TASK_RUNNING:
+				state_str = "RUNNING";
+				break;
+			case TASK_SLEEPING:
+				state_str = "SLEEPING";
+				break;
+			case TASK_EXITED:
+				state_str = "EXITED";
+				break;
+			default:
+				state_str = "UNKNOWN";
+				break;
+			}
+			printf("  State: %s\n", state_str);
+			if (i == _current)
+			{
+				printf("  [CURRENT]\n");
+			}
+			printf("------------------\n");
+			active_tasks++;
+		}
+	}
+	printf("Active tasks: %d, Current: %d\n", active_tasks, _current);
+	printf("=== End of Tasks Info ===\n\n");
 }

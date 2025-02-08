@@ -16,13 +16,20 @@ void timer_load(int timeout_tick)
     *(uint64_t *)CLINT_MTIMECMP(id) = timeout_tick;
 }
 
+uint32_t get_mtimecmp(void)
+{
+    int id = r_mhartid();
+    volatile uint32_t *mtimecmp_ptr = (volatile uint32_t *)CLINT_MTIMECMP(id);
+    return *mtimecmp_ptr;
+}
+
 void timer_init()
 {
     /*
      * On reset, mtime is cleared to zero, but the mtimecmp registers
      * are not reset. So we have to init the mtimecmp manually.
      */
-    timer_create(timer_handler, NULL, 1);
+    // timer_create(timer_handler, NULL, 1);
 
     /* enable machine-mode timer interrupts. */
     w_mie(r_mie() | MIE_MTIE);
@@ -61,6 +68,11 @@ void timer_delete(timer *timer)
 
 void run_timer_list()
 {
+    if (timers == NULL)
+    {
+        timer_create(schedule, NULL, 1);
+        return;
+    }
     printf("timer expired: %ld\n", timers->timeout_tick);
     printf("current tick: %ld\n", get_mtime());
 
@@ -81,8 +93,60 @@ void run_timer_list()
 void timer_handler()
 {
     printf("tick: %d\n", _tick++);
-    timer_create(timer_handler, NULL, 1);
+    print_tasks();
+    print_timers();
+    // if (timers->func == timer_handler)
+    // {
+    //     timer_create(timer_handler, NULL, 1);
+    // }
     run_timer_list();
     task_yield();
-    check_timeslice();
+    // check_timeslice();
+}
+
+/* 打印定时器链表信息的调试函数 */
+void print_timers(void)
+{
+    printf("\n=== Timer List Debug Info ===\n");
+    printf("MTIMECMP:%d\n", get_mtimecmp());
+    if (timers == NULL)
+    {
+        printf("Timer list is empty\n");
+        return;
+    }
+
+    timer *current = timers;
+    int count = 0;
+
+    while (current != NULL)
+    {
+        printf("Timer[%d]:\n", count++);
+        printf("  timeout_tick: %d\n", current->timeout_tick);
+        const char *func_name = "unknown";
+        if (current->func == timer_handler)
+        {
+            func_name = "timer_handler";
+        }
+        else if (current->func == task_yield)
+        {
+            func_name = "task_yield";
+        }
+        else if (current->func == wake_up_task)
+        {
+            func_name = "wake_up_task";
+        }
+        else if (current->func == schedule)
+        {
+            func_name = "schedule";
+        }
+
+        // ... 添加其他你需要识别的函数
+
+        printf("  func name: %s\n", func_name);
+        printf("  arg: %p\n", current->arg);
+        printf("  next: %p\n", (void *)current->next);
+
+        current = current->next;
+    }
+    printf("=== End of Timer List ===\n\n");
 }

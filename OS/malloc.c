@@ -116,7 +116,7 @@ void free(void *ptr)
     mem_block *block_to_free = (mem_block *)((char *)ptr - sizeof(mem_block));
     block_to_free->free = 1;
 
-    printf("释放块：地址=%p，大小=%d\n\n", (void *)block_to_free, block_to_free->size);
+    //printf("释放块：地址=%p，大小=%d\n\n", (void *)block_to_free, block_to_free->size);
 
     // 合并空闲块
     mem_block *current = free_list;

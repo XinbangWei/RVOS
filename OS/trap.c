@@ -44,7 +44,7 @@ reg_t trap_handler(reg_t epc, reg_t cause)
 		switch (cause_code)
 		{
 		case 3:
-			// uart_puts("软件中断！\n");
+			uart_puts("软件中断！\n");
 			/*
 			 * 清除软件中断
 			 */
@@ -57,7 +57,7 @@ reg_t trap_handler(reg_t epc, reg_t cause)
 				break;
 			}
 		case 7:
-			// uart_puts("定时器中断！\n");
+			uart_puts("定时器中断！\n");
 			timer_handler();
 			break;
 		case 11:

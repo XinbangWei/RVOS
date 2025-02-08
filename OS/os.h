@@ -75,6 +75,7 @@ typedef struct
 {
 	struct context ctx;
 	void *param;
+	void (*func)(void *param);
 	uint8_t priority;
 	task_state state;
 	uint32_t timeslice;
@@ -92,6 +93,12 @@ typedef struct timer
 } timer;
 
 extern uint32_t get_mtime(void);
+extern void print_timers(void);
+extern void wake_up_task(void *arg);
+extern void user_task0(void *param);
+extern void user_task1(void *param);
+extern void user_task(void *param);
+extern void print_tasks(void);
 
 /* interval ~= 1s */
 #define TIMER_INTERVAL CLINT_TIMEBASE_FREQ
