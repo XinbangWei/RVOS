@@ -91,14 +91,21 @@ typedef struct timer
 	struct timer *next;
 } timer;
 
+extern uint32_t get_mtime(void);
+
+/* interval ~= 1s */
+#define TIMER_INTERVAL CLINT_TIMEBASE_FREQ
+
 extern timer *timers, *next_timer;
-extern uint32_t mtime_base; // CLINT_MTIME 的基准值
 
 #define SCHEDULE                         \
 	{                                    \
 		int id = r_mhartid();            \
 		*(uint32_t *)CLINT_MSIP(id) = 1; \
 	}
+
+extern void timer_load(int);
+void timer_handler();
 
 extern int task_create(void (*start_routin)(void *param), void *param, uint8_t priority, uint32_t timeslice);
 extern void task_delay(uint32_t count);

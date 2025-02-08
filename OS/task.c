@@ -99,8 +99,8 @@ void schedule()
 
 	if (next_task == -1)
 	{
-		panic("没有可调度的任务");
 		spin_unlock();
+		panic("没有可调度的任务");
 		return;
 	}
 

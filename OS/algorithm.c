@@ -34,6 +34,7 @@ timer *insert_to_timer_list(timer *timer_head, timer *_timer)
     {
         next_timer = _timer;
     }
+    timer_load(timer_head->timeout_tick);
 
     return timer_head;
 }

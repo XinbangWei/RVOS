@@ -45,8 +45,11 @@ void os_main(void)
 {
 	// 创建内核调度任务已经在 `sched_init` 中完成
 	// 创建用户任务
-	task_create(user_task0, NULL, 128, DEFAULT_TIMESLICE);	  // 优先级 1
-	task_create(user_task1, NULL, 128, DEFAULT_TIMESLICE);	  // 优先级 2
+	printf("current time:%d\n",get_mtime());
+	task_create(user_task0, NULL, 128, DEFAULT_TIMESLICE);	 // 优先级 1
+	task_create(user_task1, NULL, 128, DEFAULT_TIMESLICE);	 // 优先级 2
 	task_create(user_task, (void *)2, 3, DEFAULT_TIMESLICE); // 优先级 3
 	task_create(user_task, (void *)3, 3, DEFAULT_TIMESLICE); // 优先级 3
+    printf("current time:%d\n",get_mtime());
+	printf("timer expired: %d\n", timers->timeout_tick);
 }

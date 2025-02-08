@@ -34,7 +34,7 @@ void external_interrupt_handler()
 
 reg_t trap_handler(reg_t epc, reg_t cause)
 {
-	printf("异常发生！epc = %x, cause = %x\n", epc, cause);
+	// printf("异常发生！epc = %x, cause = %x\n", epc, cause);
 	reg_t return_pc = epc;
 	reg_t cause_code = cause & 0xfff;
 
@@ -44,22 +44,24 @@ reg_t trap_handler(reg_t epc, reg_t cause)
 		switch (cause_code)
 		{
 		case 3:
-			uart_puts("软件中断！\n");
+			// uart_puts("软件中断！\n");
 			/*
 			 * 清除软件中断
 			 */
-			int id = r_mhartid();
-			*(uint32_t *)CLINT_MSIP(id) = 0;
+			{
+				int id = r_mhartid();
+				*(uint32_t *)CLINT_MSIP(id) = 0;
 
-			// 切换到内核调度任务
-			schedule();
-			break;
+				// 切换到内核调度任务
+				schedule();
+				break;
+			}
 		case 7:
-			uart_puts("定时器中断！\n");
+			// uart_puts("定时器中断！\n");
 			timer_handler();
 			break;
 		case 11:
-			uart_puts("外部中断！\n");
+			// uart_puts("外部中断！\n");
 			external_interrupt_handler();
 			break;
 		default:
