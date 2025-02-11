@@ -34,6 +34,7 @@ void start_kernel(void)
 
     while (1)
     {
+        printf("kernel running\n");
         SCHEDULE
     }
     uart_puts("Would not go here!\n");

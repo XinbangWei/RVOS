@@ -44,7 +44,7 @@ reg_t trap_handler(reg_t epc, reg_t cause)
 		switch (cause_code)
 		{
 		case 3:
-			uart_puts("软件中断！\n");
+			//uart_puts("软件中断！\n");
 			/*
 			 * 清除软件中断
 			 */
@@ -57,8 +57,9 @@ reg_t trap_handler(reg_t epc, reg_t cause)
 				break;
 			}
 		case 7:
-			uart_puts("定时器中断！\n");
+			//uart_puts("定时器中断！\n");
 			timer_handler();
+			//schedule();
 			break;
 		case 11:
 			// uart_puts("外部中断！\n");
@@ -72,7 +73,7 @@ reg_t trap_handler(reg_t epc, reg_t cause)
 	else
 	{
 		/* 同步陷阱 - 异常 */
-		printf("同步异常!, code = %d, epc = %d\n", cause_code, epc);
+		printf("同步异常!, code = %d, epc = %x\n", cause_code, epc);
 		panic("OOPS! 无法处理的异常！");
 		return_pc += 4;
 	}

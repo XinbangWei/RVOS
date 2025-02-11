@@ -4,16 +4,19 @@ timer *insert_to_timer_list(timer *timer_head, timer *_timer)
     if (timer_head == NULL)
     {
         next_timer = _timer;
+        timer_load(_timer->timeout_tick);
         return _timer;
     }
     if (timer_head->timeout_tick > _timer->timeout_tick)
     {
         _timer->next = timer_head;
         next_timer = _timer;
+        timer_load(_timer->timeout_tick);
         return _timer;
     }
 
     timer *current_timer = timer_head;
+    timer_load(timer_head->timeout_tick);
     while (current_timer->next != NULL)
     {
         if (current_timer->next->timeout_tick > _timer->timeout_tick && current_timer->timeout_tick < _timer->timeout_tick)

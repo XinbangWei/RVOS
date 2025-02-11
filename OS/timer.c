@@ -68,31 +68,34 @@ void timer_delete(timer *timer)
 
 void run_timer_list()
 {
-    if (timers == NULL)
-    {
-        timer_create(schedule, NULL, 1);
-        return;
-    }
-    printf("timer expired: %ld\n", timers->timeout_tick);
-    printf("current tick: %ld\n", get_mtime());
-
+    //printf("timer expired: %ld\n", timers->timeout_tick);
+    //printf("current tick: %ld\n", get_mtime());
     while (timers != NULL && timers->timeout_tick <= get_mtime())
     {
         timer *expired = timers;
         timers = timers->next;
-
+        
         // 执行定时器回调
         expired->func(expired->arg);
-
+        
         // 释放定时器
         free(expired);
+    }
+    if (timers == NULL)
+    {
+        timer_create(schedule, NULL, 1);
+        spin_unlock();
+        return;
     }
     timer_load(timers->timeout_tick);
 }
 
 void timer_handler()
 {
+    spin_lock();
     printf("tick: %d\n", _tick++);
+    printf("mtime: %d\n", get_mtime());
+    printf("mtimecmp: %d\n", get_mtimecmp());
     print_tasks();
     print_timers();
     // if (timers->func == timer_handler)
@@ -100,7 +103,7 @@ void timer_handler()
     //     timer_create(timer_handler, NULL, 1);
     // }
     run_timer_list();
-    task_yield();
+    spin_unlock();
     // check_timeslice();
 }
 

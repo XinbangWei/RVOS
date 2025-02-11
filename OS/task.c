@@ -6,7 +6,7 @@ extern void switch_to(struct context *next);
 #define MAX_TASKS 10
 #define STACK_SIZE 1024 * 1024
 #define KERNEL_STACK_SIZE 1024 * 1024
-
+#define TASK_USABLE(i) (((tasks[(i)].state) == TASK_READY) || ((tasks[(i)].state) == TASK_RUNNING))
 /*
  * In the standard RISC-V calling convention, the stack pointer sp
  * is always 16-byte aligned.
@@ -64,6 +64,8 @@ void schedule()
 
 	int next_task = -1;
 	uint8_t highest_priority = 255;
+	if (tasks[_current].state == TASK_RUNNING)
+		tasks[_current].state = TASK_READY;
 
 	// 找到最高优先级
 	for (int i = 0; i < _top; i++)
@@ -100,7 +102,7 @@ void schedule()
 	if (next_task == -1)
 	{
 		spin_unlock();
-		panic("没有可调度的任务");
+		//panic("没有可调度的任务");
 		return;
 	}
 
@@ -147,7 +149,7 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
 	tasks[_top].ctx.pc = (reg_t)start_routin;
 	tasks[_top].ctx.a0 = param;
 	// 初始化 mstatus 为用户模式，以防后续任务切换时出错
-	tasks[_top].ctx.mstatus = (0 << 11) | (1 << 7); // MPP = 3 (机器模式), MPIE = 1
+	tasks[_top].ctx.mstatus = (0 << 11) | (1 << 7); // MPP = 0 (用户模式), MPIE = 1
 
 	// 其他初始化代码...
 	tasks[_top].priority = priority;
@@ -170,7 +172,14 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
  */
 void task_yield()
 {
-	// 触发一个软件中断，内核调度任务将负责实际的任务切换
+	spin_lock();
+	if (_current != -1 && tasks[_current].state == TASK_RUNNING)
+	{
+		tasks[_current].state = TASK_READY;
+	}
+	spin_unlock();
+
+	// 触发软件中断让调度器介入
 	int hart = r_mhartid();
 	*(uint32_t *)CLINT_MSIP(hart) = 1;
 }
@@ -197,12 +206,12 @@ void wake_up_task(void *arg)
 {
 	int task_id = (int)arg;
 
-	spin_lock();
+	// spin_lock();
 	if (task_id >= 0 && task_id < MAX_TASKS && tasks[task_id].state == TASK_SLEEPING)
 	{
 		tasks[task_id].state = TASK_READY;
 	}
-	spin_unlock();
+	// spin_unlock();
 }
 
 /*
