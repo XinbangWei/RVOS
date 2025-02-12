@@ -95,6 +95,7 @@ typedef struct timer
 extern uint32_t get_mtime(void);
 extern void print_timers(void);
 extern void wake_up_task(void *arg);
+extern void just_while(void);
 extern void user_task0(void *param);
 extern void user_task1(void *param);
 extern void user_task(void *param);
