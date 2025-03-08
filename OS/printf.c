@@ -134,5 +134,8 @@ void panic(char *s)
 	printf("panic: ");
 	printf(s);
 	printf("\n");
-	while(1){};
+	while(1){
+		for(int i=0;i<10000000;i++);
+		printf("something run\n");
+	};
 }

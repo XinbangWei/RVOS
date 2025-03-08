@@ -20,6 +20,8 @@ void start_kernel(void)
 
     page_init();
 
+    memory_init(); // 初始化内存管理
+
     trap_init();
 
     plic_init();
@@ -28,12 +30,11 @@ void start_kernel(void)
 
     sched_init();
 
-    memory_init(); // 初始化内存管理
-
     os_main();
 
     while (1)
     {
+        printf("kernel running\n");
         SCHEDULE
     }
     uart_puts("Would not go here!\n");
