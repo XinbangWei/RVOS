@@ -9,6 +9,7 @@ $(shell mkdir -p $(BUILD_DIR))
 SRCS_ASM = \
 	start.S \
 	mem.S \
+	usyscall.S \
 	entry.S \
 
 SRCS_C = \
@@ -18,6 +19,7 @@ SRCS_C = \
 	page.c \
 	task.c \
 	malloc.c \
+	syscall.c \
 	user.c \
 	trap.c \
 	plic.c \

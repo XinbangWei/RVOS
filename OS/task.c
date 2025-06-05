@@ -4,50 +4,57 @@
 extern void switch_to(struct context *next);
 
 #define MAX_TASKS 10
-#define STACK_SIZE 1024 * 1024
-#define KERNEL_STACK_SIZE 1024 * 1024
-#define TASK_USABLE(i) (((tasks[(i)].state) == TASK_READY) || ((tasks[(i)].state) == TASK_RUNNING))
+#define STACK_SIZE 1024
+#define KERNEL_STACK_SIZE 1024
+// #define TASK_USABLE(i) (((tasks[(i)].state) == TASK_READY) || ((tasks[(i)].state) == TASK_RUNNING))
+#define MSTATUS_MPP_MASK (3 << 11)
+#define MSTATUS_MIE (1 << 3)
+#define MSTATUS_MPIE (1 << 7)
 /*
  * In the standard RISC-V calling convention, the stack pointer sp
  * is always 16-byte aligned.
  */
-uint8_t __attribute__((aligned(16))) task_stack[MAX_TASKS][STACK_SIZE];
-uint8_t __attribute__((aligned(16))) kernel_stack_kernel[KERNEL_STACK_SIZE];
+uint8_t task_stack[MAX_TASKS][STACK_SIZE];
+uint8_t kernel_stack_kernel[KERNEL_STACK_SIZE];
+// __attribute__((aligned(16))) 
 task_t tasks[MAX_TASKS];
 struct context kernel_ctx;
+static int _top = 0;
+static int current_task_id = -1;
+struct context *current_ctx;
 
 /*
  * _top is used to mark the max available position of tasks
  * _current is used to point to the context of current task
  */
-static int _top = 0;
-static int _current = -1;
 
 void kernel_scheduler()
 {
 	while (1)
 	{
-		SCHEDULE
+		SCHEDULE;
 	}
 }
 
-// 在 `sched_init` 中创建内核调度任务
+void back_to_os(void)
+{
+	switch_to(&kernel_ctx);
+}
+
+//在 `sched_init` 中创建内核调度任务
 void sched_init()
 {
-	w_mscratch((reg_t)&kernel_ctx);
+	// w_mscratch((reg_t)&kernel_ctx);
 	w_mie(r_mie() | MIE_MSIE);
 
 	// 初始化内核调度任务上下文
 	kernel_ctx.sp = (reg_t)&kernel_stack_kernel[KERNEL_STACK_SIZE];
+	kernel_ctx.ra = (reg_t)kernel_scheduler;
 	kernel_ctx.pc = (reg_t)kernel_scheduler;
 
 	// task_create(kernel_scheduler, NULL, 0); // 优先级最高的内核任务
 
 	// 其他初始化代码...
-}
-void back_to_os(void)
-{
-	switch_to(&kernel_ctx);
 }
 
 /*
@@ -64,8 +71,8 @@ void schedule()
 
 	int next_task = -1;
 	uint8_t highest_priority = 255;
-	if (tasks[_current].state == TASK_RUNNING)
-		tasks[_current].state = TASK_READY;
+	if (tasks[current_task_id].state == TASK_RUNNING)
+		tasks[current_task_id].state = TASK_READY;
 
 	// 找到最高优先级
 	for (int i = 0; i < _top; i++)
@@ -79,7 +86,7 @@ void schedule()
 	// 在最高优先级中轮转选择下一个任务
 	for (int i = 0; i < _top; i++)
 	{
-		int idx = (_current + 1 + i) % _top;
+		int idx = (current_task_id + 1 + i) % _top;
 		if (tasks[idx].state == TASK_READY && tasks[idx].priority == highest_priority)
 		{
 			next_task = idx;
@@ -102,27 +109,27 @@ void schedule()
 	if (next_task == -1)
 	{
 		spin_unlock();
-		//panic("没有可调度的任务");
+		// panic("没有可调度的任务");
 		return;
 	}
 
-	_current = next_task;
-	struct context *next = &(tasks[_current].ctx);
+	current_task_id = next_task;
+	current_ctx = &(tasks[next_task].ctx);
 
-	tasks[_current].state = TASK_RUNNING;
-	switch_to(next);
+	tasks[current_task_id].state = TASK_RUNNING;
+	switch_to(current_ctx);
 	spin_unlock();
 }
 
-void check_timeslice()
-{
-	tasks[_current].remaining_timeslice--;
-	if (tasks[_current].remaining_timeslice == 0)
-	{
-		tasks[_current].remaining_timeslice = tasks[_current].timeslice;
-		task_yield();
-	}
-}
+// void check_timeslice()
+// {
+// 	tasks[current_ctx].remaining_timeslice--;
+// 	if (tasks[current_ctx].remaining_timeslice == 0)
+// 	{
+// 		tasks[current_ctx].remaining_timeslice = tasks[current_ctx].timeslice;
+// 		task_yield();
+// 	}
+// }
 
 /*
  * DESCRIPTION
@@ -145,24 +152,25 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
 
 	tasks[_top].func = start_routin;
 	tasks[_top].param = param;
-	tasks[_top].ctx.sp = (reg_t)&task_stack[_top][STACK_SIZE] & ~0xF;
+	tasks[_top].ctx.sp = (reg_t)&task_stack[_top][STACK_SIZE - 1];
+	tasks[_top].ctx.ra = (reg_t)start_routin;
 	tasks[_top].ctx.pc = (reg_t)start_routin;
 	tasks[_top].ctx.a0 = param;
-	// 初始化 mstatus 为用户模式，以防后续任务切换时出错
-	tasks[_top].ctx.mstatus = (0 << 11) | (1 << 7); // MPP = 0 (用户模式), MPIE = 1
 
-	// 其他初始化代码...
+	// 参考 minios: 从当前 mstatus 读取，并清除 MPP 字段，再设置 MPIE 位
+	// tasks[_top].ctx.mstatus = MSTATUS_MPIE; // 明确设置 MPP=0，即用户模式
+
 	tasks[_top].priority = priority;
 	tasks[_top].state = TASK_READY;
 	tasks[_top].timeslice = timeslice;
 	tasks[_top].remaining_timeslice = timeslice;
 
-	printf("创建任务: %p\n", (void *)tasks[_top].ctx.pc);
+	printf("创建任务: %p\n", (void *)tasks[_top].ctx.ra);
 
-	_top++;
+	//_top++;
 
 	spin_unlock();
-	return 0;
+	return _top++;
 }
 
 /*
@@ -173,15 +181,13 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
 void task_yield()
 {
 	spin_lock();
-	if (_current != -1 && tasks[_current].state == TASK_RUNNING)
+	if (current_task_id != -1 && tasks[current_task_id].state == TASK_RUNNING)
 	{
-		tasks[_current].state = TASK_READY;
+		tasks[current_task_id].state = TASK_READY;
 	}
 	spin_unlock();
 
-	// 触发软件中断让调度器介入
-	int hart = r_mhartid();
-	*(uint32_t *)CLINT_MSIP(hart) = 1;
+	back_to_os();
 }
 /*
  * DESCRIPTION
@@ -190,13 +196,13 @@ void task_yield()
 void task_exit()
 {
 	spin_lock();
-	if (_current != -1)
+	if (current_task_id != -1)
 	{
-		tasks[_current].state = TASK_EXITED;
+		tasks[current_task_id].state = TASK_EXITED;
 		uart_puts("任务已退出，并被调度器回收。\n");
 	}
 	spin_unlock();
-	SCHEDULE
+	back_to_os();
 	// 如果所有任务都退出，内核可以进入空闲状态或重新启动
 	panic("所有任务已退出，系统终止。");
 }
@@ -214,6 +220,13 @@ void wake_up_task(void *arg)
 	// spin_unlock();
 }
 
+// void task_go(int i)
+// {
+// 	current_ctx = &tasks[i];
+// 	// switch_to(ctx_now);
+// 	sys_switch(&kernel_ctx, &tasks[i]);
+// }
+
 /*
  * DESCRIPTION
  *  task_delay() causes the calling task to sleep for a specified number of ticks.
@@ -222,13 +235,13 @@ void wake_up_task(void *arg)
 void task_delay(uint32_t ticks)
 {
 	spin_lock();
-	if (_current == -1)
+	if (current_task_id == -1)
 	{
 		spin_unlock();
 		return;
 	}
 
-	int task_id = _current;
+	int task_id = current_task_id;
 	tasks[task_id].state = TASK_SLEEPING;
 	spin_unlock();
 
@@ -300,7 +313,7 @@ void print_tasks(void)
 				break;
 			}
 			printf("  State: %s\n", state_str);
-			if (i == _current)
+			if (i == current_task_id)
 			{
 				printf("  [CURRENT]\n");
 			}
@@ -308,6 +321,6 @@ void print_tasks(void)
 			active_tasks++;
 		}
 	}
-	printf("Active tasks: %d, Current: %d\n", active_tasks, _current);
+	printf("Active tasks: %d, Current: %d\n", active_tasks, current_task_id);
 	printf("=== End of Tasks Info ===\n\n");
 }

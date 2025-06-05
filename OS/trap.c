@@ -1,9 +1,15 @@
 #include "os.h"
+#include "syscall.h"
 
 extern void trap_vector(void);
 extern void uart_isr(void);
 extern void timer_handler(void);
 extern void schedule(void);
+extern void do_syscall(struct context *ctx);
+
+extern task_t tasks[];
+extern int current_ctx;
+struct context context_inited = {0};
 
 void trap_init()
 {
@@ -11,6 +17,7 @@ void trap_init()
 	 * set the trap-vector base-address for machine-mode
 	 */
 	w_mtvec((reg_t)trap_vector);
+	w_mscratch((reg_t)&context_inited);
 }
 
 void external_interrupt_handler()
@@ -32,37 +39,28 @@ void external_interrupt_handler()
 	}
 }
 
-reg_t trap_handler(reg_t epc, reg_t cause)
+reg_t trap_handler(reg_t epc, reg_t cause, struct context *ctx)
 {
-	// printf("异常发生！epc = %x, cause = %x\n", epc, cause);
 	reg_t return_pc = epc;
 	reg_t cause_code = cause & 0xfff;
+	uart_puts("trap_handler\n");
 
 	if (cause & 0x80000000)
 	{
-		/* 异步陷阱 - 中断 */
+		// 异步陷阱：中断处理
 		switch (cause_code)
 		{
 		case 3:
-			//uart_puts("软件中断！\n");
-			/*
-			 * 清除软件中断
-			 */
-			{
-				int id = r_mhartid();
-				*(uint32_t *)CLINT_MSIP(id) = 0;
-
-				// 切换到内核调度任务
-				schedule();
-				break;
-			}
+		{
+			int id = r_mhartid();
+			*(uint32_t *)CLINT_MSIP(id) = 0;
+			schedule();
+			break;
+		}
 		case 7:
-			//uart_puts("定时器中断！\n");
 			timer_handler();
-			//schedule();
 			break;
 		case 11:
-			// uart_puts("外部中断！\n");
 			external_interrupt_handler();
 			break;
 		default:
@@ -72,11 +70,38 @@ reg_t trap_handler(reg_t epc, reg_t cause)
 	}
 	else
 	{
-		/* 同步陷阱 - 异常 */
-		printf("同步异常!, code = %d, epc = %x\n", cause_code, epc);
-		panic("OOPS! 无法处理的异常！");
-		return_pc += 4;
+		// 同步异常
+		switch (cause_code)
+		{
+		case 2:
+			uart_puts("Illegal instruction!\n");
+			break;
+		case 5:
+			uart_puts("Fault load!\n");
+			break;
+		case 7:
+			uart_puts("Fault store!\n");
+			break;
+		case 8:
+			uart_puts("Environment call from U-mode!\n");
+			do_syscall(ctx);
+			return_pc += 4;
+			break;
+		case 11:
+			//uart_puts("Environment call from M-mode!\n");
+			do_syscall(ctx);
+			return_pc += 4;
+			break;
+		default:
+			/* Synchronous trap - exception */
+			printf("Sync exceptions! cause code: %d\n", cause_code);
+			while (1)
+			{
+				;
+			}
+			
+			break;
+		}
 	}
-
 	return return_pc;
 }

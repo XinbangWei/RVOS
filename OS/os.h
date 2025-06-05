@@ -59,7 +59,7 @@ struct context
 
 	// save the pc to run in next schedule cycle
 	reg_t pc;	   // offset: 31 *4 = 124
-	reg_t mstatus; // 新增字段，用于保存 mstatus 寄存器
+	// reg_t mstatus; // 新增字段，用于保存 mstatus 寄存器
 };
 
 typedef enum
@@ -100,6 +100,7 @@ extern void user_task0(void *param);
 extern void user_task1(void *param);
 extern void user_task(void *param);
 extern void print_tasks(void);
+extern void task_go(int i);
 
 /* interval ~= 1s */
 #define TIMER_INTERVAL CLINT_TIMEBASE_FREQ
@@ -119,6 +120,8 @@ extern int task_create(void (*start_routin)(void *param), void *param, uint8_t p
 extern void task_delay(uint32_t count);
 extern void task_yield();
 extern void task_exit();
+extern void sys_switch(struct context *ctx_new);
+
 
 /* scheduler functions */
 extern void sched_init(void);

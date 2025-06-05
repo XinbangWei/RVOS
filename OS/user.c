@@ -1,4 +1,7 @@
 #include "os.h"
+#include "lib.h" // 引入新封装的头文件
+
+#include "syscall.h"
 
 #define DELAY 1
 
@@ -46,17 +49,35 @@ void user_task(void *param)
 	task_exit();
 }
 
+void test_syscalls_task(void *param)
+{
+	uart_puts("Task: test_syscalls_task\n");
+	unsigned int hid = -1;
+
+	int ret = -1;
+	ret = gethid(&hid);
+	// ret = gethid(NULL);
+	if (!ret)
+	{
+		printf("system call returned!, hart id is %d\n", hid);
+	}
+	else
+	{
+		printf("gethid() failed, return: %d\n", ret);
+	}
+	task_exit();
+}
+
 /* NOTICE: DON'T LOOP INFINITELY IN main() */
 void os_main(void)
 {
-	// 创建内核调度任务已经在 `sched_init` 中完成
-	// 创建用户任务
-	//printf("current time:%d\n",get_mtime());
-	task_create(just_while, NULL, 129, DEFAULT_TIMESLICE);		 // 优先级 0
-	task_create(user_task0, NULL, 128, DEFAULT_TIMESLICE);	 // 优先级 1
-	task_create(user_task1, NULL, 128, DEFAULT_TIMESLICE);	 // 优先级 2
-	task_create(user_task, (void *)2, 3, DEFAULT_TIMESLICE); // 优先级 3
-	task_create(user_task, (void *)3, 3, DEFAULT_TIMESLICE); // 优先级 3
-    //printf("current time:%d\n",get_mtime());
-	//printf("timer expired: %d\n", timers->timeout_tick);
+	// 将测试任务添加到任务调度中，确保该任务在 U 模式下运行
+	task_create(test_syscalls_task, NULL, 1, DEFAULT_TIMESLICE);
+	// 继续添加其他用户任务或内核任务...
+	task_create(just_while, NULL, 129, DEFAULT_TIMESLICE);
+	task_create(user_task0, NULL, 128, DEFAULT_TIMESLICE);
+	task_create(user_task1, NULL, 128, DEFAULT_TIMESLICE);
+	task_create(user_task, (void *)2, 3, DEFAULT_TIMESLICE);
+	task_create(user_task, (void *)3, 3, DEFAULT_TIMESLICE);
+	
 }
