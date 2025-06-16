@@ -173,6 +173,9 @@ switch_to:
 	lw	a1, 124(a0)
 	csrw	mepc, a1
 
+        lw      a1, 128(a0)     # 加载调度器设置的mstatus
+        csrw    mstatus, a1     # 这个mstatus包含了正确的MPP值
+
 	# Restore all GP registers
 	# Use t6 to point to the context of the new task
 	mv	t6, a0
@@ -181,5 +184,4 @@ switch_to:
 	# Do actual context switching.
 	# Notice this will enable global interrupt
 	mret
-
 .end

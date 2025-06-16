@@ -25,6 +25,9 @@ void do_syscall(struct context *ctx)
 	case 1:
 		ctx->a0 = sys_gethid((unsigned int *)(ctx->a0));
 		break;
+	case 2:
+		task_exit();
+		break;
 	default:
 		printf("Unknown syscall no: %d\n", syscall_num);
 		ctx->a0 = -1;

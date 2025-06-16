@@ -75,12 +75,15 @@ reg_t trap_handler(reg_t epc, reg_t cause, struct context *ctx)
 		{
 		case 2:
 			uart_puts("Illegal instruction!\n");
+			while (1);
 			break;
 		case 5:
 			uart_puts("Fault load!\n");
+			while(1);
 			break;
 		case 7:
 			uart_puts("Fault store!\n");
+			while(1);
 			break;
 		case 8:
 			uart_puts("Environment call from U-mode!\n");

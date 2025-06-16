@@ -38,7 +38,7 @@ void kernel_scheduler()
 
 void back_to_os(void)
 {
-	switch_to(&kernel_ctx);
+	schedule();
 }
 
 //在 `sched_init` 中创建内核调度任务
@@ -117,6 +117,7 @@ void schedule()
 	current_ctx = &(tasks[next_task].ctx);
 
 	tasks[current_task_id].state = TASK_RUNNING;
+	check_privilege_level();
 	switch_to(current_ctx);
 	spin_unlock();
 }
@@ -153,9 +154,16 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
 	tasks[_top].func = start_routin;
 	tasks[_top].param = param;
 	tasks[_top].ctx.sp = (reg_t)&task_stack[_top][STACK_SIZE - 1];
-	tasks[_top].ctx.ra = (reg_t)start_routin;
+	//tasks[_top].ctx.ra = (reg_t)start_routin;
 	tasks[_top].ctx.pc = (reg_t)start_routin;
 	tasks[_top].ctx.a0 = param;
+
+	// 关键修改：设置为用户模式
+    // MPP = 00 (用户模式), MPIE = 1 (允许中断)
+    uint32_t mstatus = r_mstatus();
+    mstatus &= ~MSTATUS_MPP;  // 清除MPP字段 (设置为00 = 用户模式)
+    mstatus |= MSTATUS_MPIE;  // 设置MPIE位，在mret后会变为MIE
+    tasks[_top].ctx.mstatus = mstatus;
 
 	// 参考 minios: 从当前 mstatus 读取，并清除 MPP 字段，再设置 MPIE 位
 	// tasks[_top].ctx.mstatus = MSTATUS_MPIE; // 明确设置 MPP=0，即用户模式
@@ -165,7 +173,7 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
 	tasks[_top].timeslice = timeslice;
 	tasks[_top].remaining_timeslice = timeslice;
 
-	printf("创建任务: %p\n", (void *)tasks[_top].ctx.ra);
+	printf("创建任务: %p\n", (void *)tasks[_top].func);
 
 	//_top++;
 
@@ -195,13 +203,13 @@ void task_yield()
  */
 void task_exit()
 {
-	spin_lock();
+	//spin_lock();
 	if (current_task_id != -1)
 	{
 		tasks[current_task_id].state = TASK_EXITED;
 		uart_puts("任务已退出，并被调度器回收。\n");
 	}
-	spin_unlock();
+	//spin_unlock();
 	back_to_os();
 	// 如果所有任务都退出，内核可以进入空闲状态或重新启动
 	panic("所有任务已退出，系统终止。");

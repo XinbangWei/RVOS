@@ -59,7 +59,7 @@ struct context
 
 	// save the pc to run in next schedule cycle
 	reg_t pc;	   // offset: 31 *4 = 124
-	// reg_t mstatus; // 新增字段，用于保存 mstatus 寄存器
+	reg_t mstatus; // 新增字段，用于保存 mstatus 寄存器
 };
 
 typedef enum
@@ -147,5 +147,7 @@ extern timer *timer_create(
 	void *arg,
 	uint32_t timeout);
 extern void timer_delete(timer *timer);
+
+extern void disable_pmp(void);
 
 #endif /* __OS_H__ */

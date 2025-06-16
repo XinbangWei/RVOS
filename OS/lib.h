@@ -2,7 +2,7 @@
 #define LIB_H
 
 #define SYS_write 64
-#define SYS_exit  93
+#define SYS_exit  2
 
 // 封装 sys_write，触发 ECALL
 static inline int sys_write(int fd, const char *buf, int count)
@@ -21,15 +21,13 @@ static inline int sys_write(int fd, const char *buf, int count)
 }
 
 // 封装 sys_exit
-static inline void sys_exit(int status)
+static inline void sys_exit()
 {
-    register int a0 asm("a0") = status;
     register int a7 asm("a7") = SYS_exit;
     asm volatile("ecall"
-                 : "+r"(a0)
+                 :
                  : "r"(a7)
-                 : "memory");
-    while(1);
+                 :);
 }
 
 #endif

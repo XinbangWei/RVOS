@@ -35,6 +35,8 @@ void start_kernel(void)
 
     printf("kernel running\n");
 
+    disable_pmp(); // 禁用PMP，允许U-Mode访问所有内存
+
     kernel_scheduler();
 
     uart_puts("Would not go here!\n");

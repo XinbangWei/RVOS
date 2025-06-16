@@ -54,10 +54,11 @@ run: all
 
 .PHONY : debug
 debug: all
-	@echo "Press Ctrl-C and then input 'quit' to exit GDB and QEMU"
-	@echo "-------------------------------------------------------"
-	@${QEMU} ${QFLAGS} -kernel $(BUILD_DIR)/os.elf -s -S &
-	@${GDB} $(BUILD_DIR)/os.elf -q -x ../gdbinit
+	@echo "Starting QEMU in debug mode..."
+	@echo "QEMU waiting for gdb connection on port 1234"
+	@${QEMU} ${QFLAGS} -kernel $(BUILD_DIR)/os.elf -s -S 
+#&
+#@${GDB} $(BUILD_DIR)/os.elf -q -x ../gdbinit
 
 .PHONY : code
 code: all
