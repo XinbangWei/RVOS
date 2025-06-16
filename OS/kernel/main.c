@@ -1,4 +1,4 @@
-#include "os.h"
+#include <kernel.h>
 
 /*
  * Following functions SHOULD be called ONLY ONE time here,

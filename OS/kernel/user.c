@@ -1,7 +1,6 @@
-#include "os.h"
-#include "lib.h" // 引入新封装的头文件
+#include <kernel.h>
 
-#include "syscall.h"
+#define DELAY 1
 
 #define DELAY 1
 
@@ -67,14 +66,13 @@ void test_syscalls_task(void *param)
 	ret = gethid(&hid);
 	// ret = gethid(NULL);
 	if (!ret)
-	{
-		printf("system call returned!, hart id is %d\n", hid);
+	{		printf("system call returned!, hart id is %d\n", hid);
 	}
 	else
 	{
 		printf("gethid() failed, return: %d\n", ret);
 	}
-	sys_exit();
+	task_exit();
 }
 
 // 在你的 test_privilege_switch 函数中，mret 之前

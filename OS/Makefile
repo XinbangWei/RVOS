@@ -6,69 +6,63 @@ BUILD_DIR = build
 # Create the build directory if it doesn't exist
 $(shell mkdir -p $(BUILD_DIR))
 
-SRCS_ASM = \
-	start.S \
-	mem.S \
-	usyscall.S \
-	entry.S \
+# Include directories
+INCLUDES = -I include
 
+# Assembly sources
+SRCS_ASM = \
+	arch/riscv/start.S \
+	arch/riscv/mem.S \
+	arch/riscv/usyscall.S \
+	arch/riscv/entry.S \
+
+# C sources
 SRCS_C = \
-	kernel.c \
-	uart.c \
-	printf.c \
-	page.c \
-	task.c \
-	malloc.c \
-	syscall.c \
-	user.c \
-	trap.c \
-	plic.c \
-	timer.c \
-	lock.c \
-	algorithm.c \
+	kernel/main.c \
+	drivers/uart.c \
+	kernel/printk.c \
+	mm/page.c \
+	kernel/sched.c \
+	mm/malloc.c \
+	kernel/syscall.c \
+	kernel/user.c \
+	kernel/trap.c \
+	drivers/plic.c \
+	kernel/timer.c \
+	kernel/spinlock.c \
+	kernel/algorithm.c \
 
 # Modify the object files to be placed in the build directory
-OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS_ASM:.S=.o))
-OBJS += $(addprefix $(BUILD_DIR)/, $(SRCS_C:.c=.o))
+OBJS_ASM = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRCS_ASM))))
+OBJS_C = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRCS_C))))
 
-.DEFAULT_GOAL := all
+OBJS = $(OBJS_ASM) $(OBJS_C)
 
-all: $(BUILD_DIR)/os.elf
+# Default target
+all: $(OBJS) $(BUILD_DIR)/os.elf
 
-# start.o must be the first in dependency!
-$(BUILD_DIR)/os.elf: ${OBJS}
-	${CC} ${CFLAGS} -T os.ld -o $@ $^
-	${OBJCOPY} -O binary $@ $(BUILD_DIR)/os.bin
+# Rule for compiling C files
+$(BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-$(BUILD_DIR)/%.o : %.c
-	${CC} ${CFLAGS} -c -o $@ $<
+# Rule for assembling assembly files
+$(BUILD_DIR)/%.o: %.S
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-$(BUILD_DIR)/%.o : %.S
-	${CC} ${CFLAGS} -c -o $@ $<
+# Linking rule
+$(BUILD_DIR)/os.elf: $(OBJS)
+	$(CC) $(CFLAGS) -T os.ld $(OBJS) -o $@
+	$(OBJCOPY) -O binary $@ $(BUILD_DIR)/os.bin
 
-run: all
-	@${QEMU} -M ? | grep virt >/dev/null || exit
-	@echo "Press Ctrl-A and then X to exit QEMU"
-	@echo "------------------------------------"
-	@${QEMU} ${QFLAGS} -kernel $(BUILD_DIR)/os.elf
-
-.PHONY : debug
-debug: all
-	@echo "Starting QEMU in debug mode..."
-	@echo "QEMU waiting for gdb connection on port 1234"
-	@${QEMU} ${QFLAGS} -kernel $(BUILD_DIR)/os.elf -s -S 
-#&
-#@${GDB} $(BUILD_DIR)/os.elf -q -x ../gdbinit
-
-.PHONY : code
-code: all
-	@${OBJDUMP} -S $(BUILD_DIR)/os.elf | less
-
-.PHONY : txt
-txt: all
-	@${OBJDUMP} -S $(BUILD_DIR)/os.elf > os.txt
-
-.PHONY : clean
 clean:
 	rm -rf $(BUILD_DIR)
-	rm -rf os.txt
+
+run: all
+	@qemu-system-riscv32 -M virt -cpu rv32 -smp 4 -m 128M -nographic -serial mon:stdio -bios none -kernel $(BUILD_DIR)/os.elf
+
+debug: all
+	@qemu-system-riscv32 -M virt -cpu rv32 -smp 4 -m 128M -nographic -serial mon:stdio -bios none -kernel $(BUILD_DIR)/os.elf -s -S
+
+.PHONY: all clean run debug
