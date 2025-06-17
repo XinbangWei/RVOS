@@ -1,4 +1,21 @@
-include ../common.mk
+# RISC-V OS Makefile
+# Integrated common.mk settings
+
+# Cross-compilation toolchain
+CROSS_COMPILE = riscv64-unknown-elf-
+CC = ${CROSS_COMPILE}gcc
+OBJCOPY = ${CROSS_COMPILE}objcopy
+OBJDUMP = ${CROSS_COMPILE}objdump
+
+# Compilation flags
+CFLAGS = -nostdlib -fno-builtin -march=rv32g -mabi=ilp32 -g -Wall
+
+# QEMU settings
+QEMU = qemu-system-riscv32
+QFLAGS = -nographic -smp 1 -machine virt -bios none
+
+# GDB settings
+GDB = gdb-multiarch
 
 # Define the build directory
 BUILD_DIR = build
@@ -55,14 +72,28 @@ $(BUILD_DIR)/%.o: %.S
 $(BUILD_DIR)/os.elf: $(OBJS)
 	$(CC) $(CFLAGS) -T os.ld $(OBJS) -o $@
 	$(OBJCOPY) -O binary $@ $(BUILD_DIR)/os.bin
+	@$(OBJDUMP) -S $@ > os.txt
 
 clean:
 	rm -rf $(BUILD_DIR)
+	rm -rf os.txt
 
 run: all
-	@qemu-system-riscv32 -M virt -cpu rv32 -smp 4 -m 128M -nographic -serial mon:stdio -bios none -kernel $(BUILD_DIR)/os.elf
+	@$(QEMU) -M ? | grep virt >/dev/null || exit
+	@echo "Press Ctrl-A and then X to exit QEMU"
+	@echo "------------------------------------"
+	@$(QEMU) $(QFLAGS) -kernel $(BUILD_DIR)/os.elf
 
 debug: all
-	@qemu-system-riscv32 -M virt -cpu rv32 -smp 4 -m 128M -nographic -serial mon:stdio -bios none -kernel $(BUILD_DIR)/os.elf -s -S
+	@echo "Press Ctrl-C and then input 'quit' to exit GDB and QEMU"
+	@echo "-------------------------------------------------------"
+	@$(QEMU) $(QFLAGS) -kernel $(BUILD_DIR)/os.elf -s -S &
+	@$(GDB) $(BUILD_DIR)/os.elf -q -x gdbinit
 
-.PHONY: all clean run debug
+code: all
+	@$(OBJDUMP) -S $(BUILD_DIR)/os.elf | less
+
+txt: all
+	@$(OBJDUMP) -S $(BUILD_DIR)/os.elf > os.txt
+
+.PHONY: all clean run debug code txt

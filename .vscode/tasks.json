@@ -1,4 +1,3 @@
-// filepath: /home/xbb/download/RVOS/.vscode/tasks.json
 {
     "version": "2.0.0",
     "tasks": [
@@ -6,11 +5,7 @@
             "label": "build-os",
             "type": "shell",
             "command": "make",
-            "group": "build",
-            "options": {
-                "cwd": "${workspaceFolder}/OS"
-            },
-            "problemMatcher": ["$gcc"]
+            "group": "build"
         },
         {
             "label": "run-os",
@@ -21,17 +16,7 @@
                 "kind": "build",
                 "isDefault": true
             },
-            "options": {
-                "cwd": "${workspaceFolder}/OS"
-            },
-            "dependsOn": "build-os",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": true,
-                "panel": "new",
-                "showReuseMessage": false
-            }
+            "dependsOn": "build-os"
         },
         {
             "label": "start-qemu",
@@ -39,22 +24,8 @@
             "command": "make",
             "args": ["debug"],
             "group": "build",
-            "options": {
-                "cwd": "${workspaceFolder}/OS"
-            },
             "isBackground": true,
-            "dependsOn": "build-os",
-            "problemMatcher": {
-                "owner": "custom",
-                "pattern": {
-                    "regexp": "."
-                },
-                "background": {
-                    "activeOnStart": true,
-                    "beginsPattern": ".*Starting QEMU.*",
-                    "endsPattern": ".*waiting for gdb.*|.*GDB.*|.*1234.*"
-                }
-            }
+            "dependsOn": "build-os"
         },
         {
             "label": "stop-qemu",
