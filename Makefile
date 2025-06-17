@@ -84,6 +84,11 @@ run: all
 	@echo "------------------------------------"
 	@$(QEMU) $(QFLAGS) -kernel $(BUILD_DIR)/os.elf
 
+qemu-gdb-server: all
+	@echo "Starting QEMU for GDB connection..."
+	@echo "QEMU GDB server will listen on port 1234"
+	@$(QEMU) $(QFLAGS) -kernel $(BUILD_DIR)/os.elf -s -S
+
 debug: all
 	@echo "Press Ctrl-C and then input 'quit' to exit GDB and QEMU"
 	@echo "-------------------------------------------------------"

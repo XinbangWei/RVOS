@@ -1,4 +1,4 @@
-#include <kernel.h>
+#include "kernel.h"
 
 /*
  * Following global vars are defined in mem.S

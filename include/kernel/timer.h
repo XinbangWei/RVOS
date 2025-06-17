@@ -1,7 +1,7 @@
 #ifndef __KERNEL_TIMER_H__
 #define __KERNEL_TIMER_H__
 
-#include <kernel/types.h>
+#include "kernel/types.h"
 
 typedef struct timer
 {

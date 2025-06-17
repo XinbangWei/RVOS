@@ -1,7 +1,7 @@
 #ifndef __RISCV_H__
 #define __RISCV_H__
 
-#include <kernel/types.h>
+#include "kernel/types.h"
 
 /*
  * ref: https://github.com/mit-pdos/xv6-riscv/blob/riscv/kernel/riscv.h

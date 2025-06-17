@@ -1,4 +1,4 @@
-#include <kernel.h>
+#include "kernel.h"
 
 int sys_gethid(unsigned int *ptr_hid)
 {

@@ -1,4 +1,4 @@
-#include <kernel.h>
+#include "kernel.h"
 
 /* defined in entry.S */
 extern void switch_to(struct context *next);

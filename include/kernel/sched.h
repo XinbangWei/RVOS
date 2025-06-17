@@ -1,7 +1,7 @@
 #ifndef __KERNEL_SCHED_H__
 #define __KERNEL_SCHED_H__
 
-#include <kernel/types.h>
+#include "kernel/types.h"
 
 /* task management */
 struct context

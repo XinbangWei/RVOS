@@ -1,14 +1,15 @@
 {
     "version": "0.2.0",
     "configurations": [
+
         {
             "name": "Debug RISC-V OS",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/OS/build/os.elf",
+            "program": "${workspaceFolder}/build/os.elf",
             "args": [],
             "stopAtEntry": true,
-            "cwd": "${workspaceFolder}/OS",
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
@@ -26,7 +27,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "start-qemu",
+            "preLaunchTask": "start-qemu-server",
             "postDebugTask": "stop-qemu"
         }
     ]
