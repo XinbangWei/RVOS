@@ -1,4 +1,4 @@
-#include "os.h"
+#include "kernel.h"
 extern timer *insert_to_timer_list(timer *timer_head, timer *_timer);
 extern timer *delete_from_timer_list(timer *timer_head, timer *_timer);
 timer *timers = NULL, *next_timer = NULL;

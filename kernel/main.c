@@ -1,4 +1,4 @@
-#include "os.h"
+#include "kernel.h"
 
 /*
  * Following functions SHOULD be called ONLY ONE time here,
@@ -12,6 +12,7 @@ extern void os_main(void);
 extern void trap_init(void);
 extern void plic_init(void);
 extern void timer_init(void);
+extern struct context *current_ctx;
 
 void start_kernel(void)
 {
@@ -32,11 +33,12 @@ void start_kernel(void)
 
     os_main();
 
-    while (1)
-    {
-        printf("kernel running\n");
-        SCHEDULE
-    }
+    printf("kernel running\n");
+
+    disable_pmp(); // 禁用PMP，允许U-Mode访问所有内存
+
+    kernel_scheduler();
+
     uart_puts("Would not go here!\n");
     while (1)
     {

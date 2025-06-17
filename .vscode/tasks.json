@@ -1,0 +1,50 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "start-qemu-server",
+            "type": "shell",
+            "command": "make qemu-gdb-server",
+            "isBackground": true,
+            "problemMatcher": [
+                {
+                    "pattern": [
+                        {
+                            "regexp": ".",
+                            "file": 1,
+                            "location": 2,
+                            "message": 3
+                        }
+                    ],
+                    "background": {
+                        "activeOnStart": true,
+                        "beginsPattern": "^Starting QEMU for GDB connection...",
+                        "endsPattern": "^(qemu-system-riscv32|QEMU|.*waiting for gdb connection.*|.*listening on port.*).*$"
+                    }
+                }
+            ]
+        },
+        {
+            "label": "stop-qemu",
+            "type": "shell",
+            "command": "killall qemu-system-riscv32 || true"
+        },
+        {
+            "label": "build-os",
+            "type": "shell",
+            "command": "make",
+            "group": "build"
+        },
+        {
+            "label": "run-os",
+            "type": "shell",
+            "command": "make",
+            "args": ["run"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "dependsOn": "build-os"
+        }
+    ]
+}

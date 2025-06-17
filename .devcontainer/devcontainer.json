@@ -1,0 +1,24 @@
+{
+  "name": "RISC-V Dev",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "postCreateCommand": "sudo apt update && sudo apt install -y gcc-riscv64-unknown-elf qemu-system-misc opensbi u-boot-qemu gdb-multiarch",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "github.copilot",
+        "github.copilot-chat",
+        "ms-ceintl.vscode-language-pack-zh-hans",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cpptools-themes",
+        "ms-vscode.makefile-tools",
+        "webfreak.debug",
+        "yzhang.markdown-all-in-one"
+      ],
+      "settings": {
+        // 如果有额外 VS Code 设置，也可以写在这里
+      }
+    }
+  }
+}

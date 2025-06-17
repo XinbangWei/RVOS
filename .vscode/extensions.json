@@ -1,0 +1,14 @@
+{
+    "recommendations": [
+        "github.copilot",
+        "github.copilot-chat",
+        "ms-ceintl.vscode-language-pack-zh-hans",
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cpptools-themes",
+        "ms-vscode.makefile-tools",
+        "webfreak.debug",
+        "yzhang.markdown-all-in-one"
+    ]
+}

@@ -1,7 +1,7 @@
 #ifndef __RISCV_H__
 #define __RISCV_H__
 
-#include "types.h"
+#include "kernel/types.h"
 
 /*
  * ref: https://github.com/mit-pdos/xv6-riscv/blob/riscv/kernel/riscv.h
@@ -98,5 +98,13 @@ static inline reg_t r_mcause()
 	asm volatile("csrr %0, mcause" : "=r" (x) );
 	return x;
 }
+
+#define SCHEDULE                         \
+	{                                    \
+		int id = r_mhartid();            \
+		*(uint32_t *)CLINT_MSIP(id) = 1; \
+	}
+
+extern void disable_pmp(void);
 
 #endif /* __RISCV_H__ */

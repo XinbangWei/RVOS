@@ -1,4 +1,4 @@
-#include "platform.h"
+#include "arch/platform.h"
 
 	# size of each hart's stack is 1024 bytes
 	.equ	STACK_SIZE, 1024

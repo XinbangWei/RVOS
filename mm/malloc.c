@@ -1,4 +1,4 @@
-#include "os.h"
+#include "kernel.h"
 
 #define MEMORY_POOL_SIZE 1024 * 1024
 // 假设有1MB的内存池
