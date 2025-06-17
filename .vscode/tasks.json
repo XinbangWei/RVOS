@@ -45,6 +45,6 @@
                 "isDefault": true
             },
             "dependsOn": "build-os"
-        },
+        }
     ]
 }

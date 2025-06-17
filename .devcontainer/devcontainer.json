@@ -1,7 +1,7 @@
 {
   "name": "RISC-V Dev",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-  "postCreateCommand": "sudo apt update && sudo apt install -y gcc-riscv64-unknown-elf qemu-system-misc opensbi u-boot-qemu",
+  "postCreateCommand": "sudo apt update && sudo apt install -y gcc-riscv64-unknown-elf qemu-system-misc opensbi u-boot-qemu gdb-multiarch",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -13,7 +13,6 @@
         "ms-vscode.cpptools-extension-pack",
         "ms-vscode.cpptools-themes",
         "ms-vscode.makefile-tools",
-        "twxs.cmake",
         "webfreak.debug",
         "yzhang.markdown-all-in-one"
       ],
