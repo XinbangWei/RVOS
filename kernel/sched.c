@@ -7,9 +7,10 @@ extern void switch_to(struct context *next);
 #define STACK_SIZE 1024
 #define KERNEL_STACK_SIZE 1024
 // #define TASK_USABLE(i) (((tasks[(i)].state) == TASK_READY) || ((tasks[(i)].state) == TASK_RUNNING))
-#define MSTATUS_MPP_MASK (3 << 11)
-#define MSTATUS_MIE (1 << 3)
-#define MSTATUS_MPIE (1 << 7)
+// S-mode status register definitions
+#define SSTATUS_SPP_MASK (1 << 8)   // Supervisor Previous Privilege
+#define SSTATUS_SIE (1 << 1)        // Supervisor Interrupt Enable  
+#define SSTATUS_SPIE (1 << 5)       // Supervisor Previous Interrupt Enable
 /*
  * In the standard RISC-V calling convention, the stack pointer sp
  * is always 16-byte aligned.
@@ -44,8 +45,8 @@ void back_to_os(void)
 //在 `sched_init` 中创建内核调度任务
 void sched_init()
 {
-	// w_mscratch((reg_t)&kernel_ctx);
-	w_mie(r_mie() | MIE_MSIE);
+	// w_sscratch((reg_t)&kernel_ctx);  // Use supervisor scratch register
+	w_sie(r_sie() | SIE_SSIE);  // Enable supervisor software interrupts
 
 	// 初始化内核调度任务上下文
 	kernel_ctx.sp = (reg_t)&kernel_stack_kernel[KERNEL_STACK_SIZE];
@@ -157,16 +158,14 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
 	//tasks[_top].ctx.ra = (reg_t)start_routin;
 	tasks[_top].ctx.pc = (reg_t)start_routin;
 	tasks[_top].ctx.a0 = param;
-
 	// 关键修改：设置为用户模式
-    // MPP = 00 (用户模式), MPIE = 1 (允许中断)
-    uint32_t mstatus = r_mstatus();
-    mstatus &= ~MSTATUS_MPP;  // 清除MPP字段 (设置为00 = 用户模式)
-    mstatus |= MSTATUS_MPIE;  // 设置MPIE位，在mret后会变为MIE
-    tasks[_top].ctx.mstatus = mstatus;
-
-	// 参考 minios: 从当前 mstatus 读取，并清除 MPP 字段，再设置 MPIE 位
-	// tasks[_top].ctx.mstatus = MSTATUS_MPIE; // 明确设置 MPP=0，即用户模式
+	// SPP = 0 (用户模式), SPIE = 1 (允许中断)
+	uint32_t sstatus = r_sstatus();
+	sstatus &= ~SSTATUS_SPP_MASK;  // 清除SPP字段 (设置为0 = 用户模式)
+	sstatus |= SSTATUS_SPIE;       // 设置SPIE位，在sret后会变为SIE
+	tasks[_top].ctx.sstatus = sstatus;
+	// 参考 minios: 从当前 sstatus 读取，并清除 SPP 字段，再设置 SPIE 位
+	// tasks[_top].ctx.sstatus = SSTATUS_SPIE; // 明确设置 SPP=0，即用户模式
 
 	tasks[_top].priority = priority;
 	tasks[_top].state = TASK_READY;
@@ -203,13 +202,13 @@ void task_yield()
  */
 void task_exit()
 {
-	//spin_lock();
+	spin_lock();
 	if (current_task_id != -1)
 	{
 		tasks[current_task_id].state = TASK_EXITED;
 		uart_puts("任务已退出，并被调度器回收。\n");
 	}
-	//spin_unlock();
+	spin_unlock();
 	back_to_os();
 	// 如果所有任务都退出，内核可以进入空闲状态或重新启动
 	panic("所有任务已退出，系统终止。");
@@ -220,12 +219,12 @@ void wake_up_task(void *arg)
 {
 	int task_id = (int)arg;
 
-	// spin_lock();
+	spin_lock();
 	if (task_id >= 0 && task_id < MAX_TASKS && tasks[task_id].state == TASK_SLEEPING)
 	{
 		tasks[task_id].state = TASK_READY;
 	}
-	// spin_unlock();
+	spin_unlock();
 }
 
 // void task_go(int i)

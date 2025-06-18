@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "name": "RISC-V OS",
+            "compilerPath": "/usr/bin/riscv64-unknown-elf-gcc",
+            "includePath": [
+                "${workspaceFolder}/include", // 来自 Makefile 的 -I include
+                "${workspaceFolder}/**"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-riscv64",
+            "compilerArgs": [
+                "-nostdlib",
+                "-fno-builtin",
+                "-march=rv64gc",
+                "-mabi=lp64d",
+                "-mcmodel=medany"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/**" // 关键！扫描项目所有文件
+                ],
+                "limitSymbolsToIncludedHeaders": false
+            }
+        }
+    ],
+    "version": 4
+}

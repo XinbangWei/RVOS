@@ -13,6 +13,7 @@
 #include "kernel/irq.h"
 #include "kernel/uart.h"
 #include "kernel/syscall.h"
+#include "kernel/boot_info.h"
 
 #include "stddef.h"
 #include "stdarg.h"

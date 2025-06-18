@@ -8,11 +8,11 @@ OBJCOPY = ${CROSS_COMPILE}objcopy
 OBJDUMP = ${CROSS_COMPILE}objdump
 
 # Compilation flags
-CFLAGS = -nostdlib -fno-builtin -march=rv32g -mabi=ilp32 -g -Wall
+CFLAGS = -nostdlib -fno-builtin -march=rv64gc -mabi=lp64d -mcmodel=medany -g -Wall
 
-# QEMU settings
-QEMU = qemu-system-riscv32
-QFLAGS = -nographic -smp 1 -machine virt -bios none
+# QEMU settings (keep for testing, but we'll target real hardware)
+QEMU = qemu-system-riscv64
+QFLAGS = -nographic -smp 1 -machine virt
 
 # GDB settings
 GDB = gdb-multiarch
@@ -48,6 +48,7 @@ SRCS_C = \
 	kernel/timer.c \
 	kernel/spinlock.c \
 	kernel/algorithm.c \
+	kernel/boot_info.c \
 
 # Modify the object files to be placed in the build directory
 OBJS_ASM = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRCS_ASM))))

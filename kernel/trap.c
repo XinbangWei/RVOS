@@ -1,4 +1,5 @@
 #include "kernel.h"
+#include "arch/sbi.h"
 
 extern void trap_vector(void);
 extern void uart_isr(void);
@@ -11,12 +12,11 @@ extern int current_ctx;
 struct context context_inited = {0};
 
 void trap_init()
-{
-	/*
-	 * set the trap-vector base-address for machine-mode
+{	/*
+	 * set the trap-vector base-address for supervisor-mode
 	 */
-	w_mtvec((reg_t)trap_vector);
-	w_mscratch((reg_t)&context_inited);
+	asm volatile("csrw stvec, %0" : : "r" ((reg_t)trap_vector));
+	asm volatile("csrw sscratch, %0" : : "r" ((reg_t)&context_inited));
 }
 
 void external_interrupt_handler()
@@ -39,27 +39,25 @@ void external_interrupt_handler()
 }
 
 reg_t trap_handler(reg_t epc, reg_t cause, struct context *ctx)
-{
-	reg_t return_pc = epc;
+{	reg_t return_pc = epc;
 	reg_t cause_code = cause & 0xfff;
 	uart_puts("trap_handler\n");
-
-	if (cause & 0x80000000)
+	if (cause & 0x8000000000000000ULL) // 64-bit interrupt flag
 	{
 		// 异步陷阱：中断处理
 		switch (cause_code)
 		{
-		case 3:
+		case 1: // Supervisor software interrupt
 		{
-			int id = r_mhartid();
-			*(uint32_t *)CLINT_MSIP(id) = 0;
+			/* In S-mode, clear the software interrupt via SBI */
+			sbi_clear_ipi();
 			schedule();
 			break;
 		}
-		case 7:
+		case 5: // Supervisor timer interrupt
 			timer_handler();
 			break;
-		case 11:
+		case 9: // Supervisor external interrupt
 			external_interrupt_handler();
 			break;
 		default:

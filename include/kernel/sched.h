@@ -36,13 +36,11 @@ struct context
 	reg_t s11;
 	reg_t t3;
 	reg_t t4;
-	reg_t t5;
-	reg_t t6;
+	reg_t t5;	reg_t t6;
 	// upon is trap frame
-
 	// save the pc to run in next schedule cycle
-	reg_t pc;	   // offset: 31 *4 = 124
-	reg_t mstatus; // 新增字段，用于保存 mstatus 寄存器
+	reg_t pc;	   // offset: 31 * 8 = 248 (64-bit)
+	reg_t sstatus; // S-mode status register (was mstatus) - offset: 32 * 8 = 256 (64-bit)
 };
 
 typedef enum

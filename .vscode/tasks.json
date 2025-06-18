@@ -19,7 +19,7 @@
                     "background": {
                         "activeOnStart": true,
                         "beginsPattern": "^Starting QEMU for GDB connection...",
-                        "endsPattern": "^(qemu-system-riscv32|QEMU|.*waiting for gdb connection.*|.*listening on port.*).*$"
+                        "endsPattern": "^(qemu-system-riscv64|QEMU|.*waiting for gdb connection.*|.*listening on port.*).*$"
                     }
                 }
             ]
@@ -27,7 +27,7 @@
         {
             "label": "stop-qemu",
             "type": "shell",
-            "command": "killall qemu-system-riscv32 || true"
+            "command": "killall qemu-system-riscv64 || true"
         },
         {
             "label": "build-os",

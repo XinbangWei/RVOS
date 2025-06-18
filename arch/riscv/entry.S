@@ -3,110 +3,110 @@
 
 # ============ MACRO ==================
 .macro ctx_save base
-        sw ra, 0(\base)
-        sw sp, 4(\base)
-        sw s0, 8(\base)
-        sw s1, 12(\base)
-        sw s2, 16(\base)
-        sw s3, 20(\base)
-        sw s4, 24(\base)
-        sw s5, 28(\base)
-        sw s6, 32(\base)
-        sw s7, 36(\base)
-        sw s8, 40(\base)
-        sw s9, 44(\base)
-        sw s10, 48(\base)
-        sw s11, 52(\base)
-	sw a0, 56(\base)
-	sw a7, 60(\base)
+        sd ra, 0(\base)
+        sd sp, 8(\base)
+        sd s0, 16(\base)
+        sd s1, 24(\base)
+        sd s2, 32(\base)
+        sd s3, 40(\base)
+        sd s4, 48(\base)
+        sd s5, 56(\base)
+        sd s6, 64(\base)
+        sd s7, 72(\base)
+        sd s8, 80(\base)
+        sd s9, 88(\base)
+        sd s10, 96(\base)
+        sd s11, 104(\base)
+	sd a0, 112(\base)
+	sd a7, 120(\base)
 .endm
 
 .macro ctx_load base
-        lw ra, 0(\base)
-        lw sp, 4(\base)
-        lw s0, 8(\base)
-        lw s1, 12(\base)
-        lw s2, 16(\base)
-        lw s3, 20(\base)
-        lw s4, 24(\base)
-        lw s5, 28(\base)
-        lw s6, 32(\base)
-        lw s7, 36(\base)
-        lw s8, 40(\base)
-        lw s9, 44(\base)
-        lw s10, 48(\base)
-        lw s11, 52(\base)
-        lw a0, 56(\base)
-        lw a7, 60(\base)
+        ld ra, 0(\base)
+        ld sp, 8(\base)
+        ld s0, 16(\base)
+        ld s1, 24(\base)
+        ld s2, 32(\base)
+        ld s3, 40(\base)
+        ld s4, 48(\base)
+        ld s5, 56(\base)
+        ld s6, 64(\base)
+        ld s7, 72(\base)
+        ld s8, 80(\base)
+        ld s9, 88(\base)
+        ld s10, 96(\base)
+        ld s11, 104(\base)
+        ld a0, 112(\base)
+        ld a7, 120(\base)
 .endm
 
 .macro reg_save base
         # save the registers.
-        sw ra, 0(\base)
-        sw sp, 4(\base)
-        sw gp, 8(\base)
-        sw tp, 12(\base)
-        sw t0, 16(\base)
-        sw t1, 20(\base)
-        sw t2, 24(\base)
-        sw s0, 28(\base)
-        sw s1, 32(\base)
-        sw a0, 36(\base)
-        sw a1, 40(\base)
-        sw a2, 44(\base)
-        sw a3, 48(\base)
-        sw a4, 52(\base)
-        sw a5, 56(\base)
-        sw a6, 60(\base)
-        sw a7, 64(\base)
-        sw s2, 68(\base)
-        sw s3, 72(\base)
-        sw s4, 76(\base)
-        sw s5, 80(\base)
-        sw s6, 84(\base)
-        sw s7, 88(\base)
-        sw s8, 92(\base)
-        sw s9, 96(\base)
-        sw s10, 100(\base)
-        sw s11, 104(\base)
-        sw t3, 108(\base)
-        sw t4, 112(\base)
-        sw t5, 116(\base)
+        sd ra, 0(\base)
+        sd sp, 8(\base)
+        sd gp, 16(\base)
+        sd tp, 24(\base)
+        sd t0, 32(\base)
+        sd t1, 40(\base)
+        sd t2, 48(\base)
+        sd s0, 56(\base)
+        sd s1, 64(\base)
+        sd a0, 72(\base)
+        sd a1, 80(\base)
+        sd a2, 88(\base)
+        sd a3, 96(\base)
+        sd a4, 104(\base)
+        sd a5, 112(\base)
+        sd a6, 120(\base)
+        sd a7, 128(\base)
+        sd s2, 136(\base)
+        sd s3, 144(\base)
+        sd s4, 152(\base)
+        sd s5, 160(\base)
+        sd s6, 168(\base)
+        sd s7, 176(\base)
+        sd s8, 184(\base)
+        sd s9, 192(\base)
+        sd s10, 200(\base)
+        sd s11, 208(\base)
+        sd t3, 216(\base)
+        sd t4, 224(\base)
+        sd t5, 232(\base)
 .endm
 
 .macro reg_load base
         # restore registers.
-        lw ra, 0(\base)
-        lw sp, 4(\base)
-        lw gp, 8(\base)
-        lw tp, 12(\base)
-        lw t0, 16(\base)
-        lw t1, 20(\base)
-        lw t2, 24(\base)
-        lw s0, 28(\base)
-        lw s1, 32(\base)
-        lw a0, 36(\base)
-        lw a1, 40(\base)
-        lw a2, 44(\base)
-        lw a3, 48(\base)
-        lw a4, 52(\base)
-        lw a5, 56(\base)
-        lw a6, 60(\base)
-        lw a7, 64(\base)
-        lw s2, 68(\base)
-        lw s3, 72(\base)
-        lw s4, 76(\base)
-        lw s5, 80(\base)
-        lw s6, 84(\base)
-        lw s7, 88(\base)
-        lw s8, 92(\base)
-        lw s9, 96(\base)
-        lw s10, 100(\base)
-        lw s11, 104(\base)
-        lw t3, 108(\base)
-        lw t4, 112(\base)
-        lw t5, 116(\base)
-        lw t6, 120(\base)
+        ld ra, 0(\base)
+        ld sp, 8(\base)
+        ld gp, 16(\base)
+        ld tp, 24(\base)
+        ld t0, 32(\base)
+        ld t1, 40(\base)
+        ld t2, 48(\base)
+        ld s0, 56(\base)
+        ld s1, 64(\base)
+        ld a0, 72(\base)
+        ld a1, 80(\base)
+        ld a2, 88(\base)
+        ld a3, 96(\base)
+        ld a4, 104(\base)
+        ld a5, 112(\base)
+        ld a6, 120(\base)
+        ld a7, 128(\base)
+        ld s2, 136(\base)
+        ld s3, 144(\base)
+        ld s4, 152(\base)
+        ld s5, 160(\base)
+        ld s6, 168(\base)
+        ld s7, 176(\base)
+        ld s8, 184(\base)
+        ld s9, 192(\base)
+        ld s10, 200(\base)
+        ld s11, 208(\base)
+        ld t3, 216(\base)
+        ld t4, 224(\base)
+        ld t5, 232(\base)
+        ld t6, 240(\base)
 .endm
 # ============ Macro END   ==================
  
@@ -138,44 +138,41 @@ atomic_swap:
 .globl trap_vector
 # the trap vector base address must always be aligned on a 4-byte boundary
 .align 4
-trap_vector:
-	# save context(registers).
-	csrrw	t6, mscratch, t6	# swap t6 and mscratch
+trap_vector:	# save context(registers).
+	csrrw	t6, sscratch, t6	# swap t6 and sscratch (use sscratch instead of mscratch)
         reg_save t6
-	csrw	mscratch, t6
+        csrw	sscratch, t6
 
-	# save mepc to context of current task
-	csrr	a0, mepc
-	sw	a0, 124(t6)
+	# save sepc to context of current task (S-mode equivalent of mepc)
+	csrr	a0, sepc
+	sd	a0, 248(t6)		# offset for 64-bit: 31 * 8 = 248
 
 	# call the C trap handler in trap.c
-	csrr	a0, mepc
-	csrr	a1, mcause
-	csrr	a2, mscratch
+	csrr	a0, sepc
+	csrr	a1, scause
+	csrr	a2, sscratch
 	call	trap_handler
-
 	# trap_handler will return the return address via a0.
-	csrw	mepc, a0
+	csrw	sepc, a0
 
 	# load context(registers).
-	csrr	t6, mscratch
+	csrr	t6, sscratch
 	reg_load t6
-	mret
+	sret				# Use sret instead of mret for S-mode
 
 # void switch_to(struct context *next);
 # a0: pointer to the context of the next task
 .globl switch_to
 .align 4
 switch_to:
-	# switch mscratch to point to the context of the next task
-	csrw	mscratch, a0
-	# set mepc to the pc of the next task
-	lw	a1, 124(a0)
-	csrw	mepc, a1
+	# switch sscratch to point to the context of the next task
+	csrw	sscratch, a0
+	# set sepc to the pc of the next task
+	ld	a1, 248(a0)		# offset for 64-bit: 31 * 8 = 248
+	csrw	sepc, a1
 
-        lw      a1, 128(a0)     # 加载调度器设置的mstatus
-        csrw    mstatus, a1     # 这个mstatus包含了正确的MPP值
-
+        ld      a1, 256(a0)     # 加载调度器设置的sstatus (offset: 32 * 8 = 256)
+        csrw    sstatus, a1     # 使用 sstatus 而不是 mstatus
 	# Restore all GP registers
 	# Use t6 to point to the context of the new task
 	mv	t6, a0
@@ -183,5 +180,5 @@ switch_to:
 
 	# Do actual context switching.
 	# Notice this will enable global interrupt
-	mret
+	sret				# Use sret instead of mret for S-mode
 .end

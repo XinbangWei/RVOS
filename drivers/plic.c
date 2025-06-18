@@ -37,13 +37,11 @@ void plic_init(void)
 	 * Notice, the threshold is global for PLIC, not for each interrupt source.
 	 */
 	*(uint32_t*)PLIC_MTHRESHOLD(hart) = 0;
+	/* enable supervisor-mode external interrupts. */
+	w_sie(r_sie() | SIE_SEIE);
 
-	/* enable machine-mode external interrupts. */
-	w_mie(r_mie() | MIE_MEIE);
-
-
-	/* enable machine-mode global interrupts. */
-	w_mstatus(r_mstatus() | MSTATUS_MIE);
+	/* enable supervisor-mode global interrupts. */
+	w_sstatus(r_sstatus() | SSTATUS_SIE);
 }
 
 /* 

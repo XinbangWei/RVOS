@@ -6,12 +6,11 @@ int sys_gethid(unsigned int *ptr_hid)
 	if (ptr_hid == NULL)
 	{
 		printf("ptr_hid == NULL\n");
-		return -1;
-	}
+		return -1;	}
 	else
 	{
 		//printf("ptr_hid != NULL\n");
-		*ptr_hid = r_mhartid();
+		*ptr_hid = r_tp(); // Use tp register which contains hartid in S-mode
 		return 0;
 	}
 }

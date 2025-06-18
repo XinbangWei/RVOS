@@ -11,11 +11,10 @@ void just_while(void)
 }
 
 void check_privilege_level(void) {
-    // 尝试读取机器模式 CSR
-    unsigned int mstatus;
-    asm volatile("csrr %0, mstatus" : "=r"(mstatus));
-    // 如果成功执行到这里，说明在 Machine 模式
-    // 如果触发异常，说明在较低特权级别
+    // 在 S-mode 下，读取 sstatus 寄存器
+    unsigned int sstatus;
+    asm volatile("csrr %0, sstatus" : "=r"(sstatus));
+    // 如果成功执行到这里，说明在 Supervisor 模式或更高特权级别
 }
 
 void user_task0(void *param)
@@ -75,21 +74,18 @@ void test_syscalls_task(void *param)
 	task_exit();
 }
 
-// 在你的 test_privilege_switch 函数中，mret 之前
+// 在 S-mode 下准备用户模式上下文
 void disable_pmp(void) {
-    // 准备用户模式上下文
-    uint32_t mstatus = r_mstatus();
-    mstatus &= ~MSTATUS_MPP; // 设置返回到用户模式 (U-Mode)
-    mstatus |= MSTATUS_MPIE;  // 在用户模式使能中断
+    // 在 S-mode 下，我们使用 sstatus 而不是 mstatus
+    uint32_t sstatus = r_sstatus();
+    sstatus &= ~SSTATUS_SPP; // 设置返回到用户模式 (U-Mode)
+    sstatus |= SSTATUS_SPIE;  // 在用户模式使能中断
 
-    w_mstatus(mstatus);
-
-    // === 新增：配置PMP以允许U-Mode访问 ===
-    // 策略：开放所有内存地址(0x0 - 0xFFFFFFFF)的 R/W/X 权限给U-Mode
-    // pmpaddr0 设置为 0xFFFFFFFF (RV32)
-    // pmpcfg0 设置模式为 TOR (Top of Range), 权限为 R/W/X
-    // TOR 模式: 匹配 pmpaddr(i-1) 到 pmpaddr(i) 的地址范围。
-    // 当 i=0, pmpaddr-1 隐式为 0。
+    w_sstatus(sstatus);
+    
+    // 注意：在 S-mode 下，我们不能直接配置 PMP
+    // PMP 配置由 M-mode（OpenSBI）管理
+    // 如果需要内存保护，需要通过 SBI 调用或使用页表权限
     
     // pmpcfg0[A] = 0b01 (TOR), pmpcfg0[XWR] = 0b111
     const uint8_t pmp_config = (1 << 3) | (1 << 2) | (1 << 1) | (1 << 0); // 0x0F
@@ -100,7 +96,7 @@ void disable_pmp(void) {
         "csrw pmpaddr0, %0\n" // 设置地址范围上限
         "csrw pmpcfg0, %1\n"  // 设置配置和权限
         :
-        : "r"(-1), "r"(pmp_config) // -1 在RV32中即 0xFFFFFFFF
+        : "r"(-1), "r"(pmp_config) // -1 在RV64中即 0xFFFFFFFFFFFFFFFF
     );
     // =====================================
 

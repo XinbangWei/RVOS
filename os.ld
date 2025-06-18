@@ -38,16 +38,15 @@ ENTRY( _start )
  * use a particular memory region for an input section which is not explicitly
  * mapped in the linker script. Here we assign 'w' (writeable), 'x' (executable),
  * and 'a' (allocatable). We use '!' to invert 'r' (read-only) and
- * 'i' (initialized).
- * The "ORIGIN" is used to set the start address of the memory region. Here we
- * place it right at the beginning of 0x8000_0000 because this is where the
- * QEMU-virt machine will start executing.
- * Finally LENGTH = 128M tells the linker that we have 128 megabyte of RAM.
+ * 'i' (initialized). * The "ORIGIN" is used to set the start address of the memory region. Here we
+ * place it at 0x80200000 to leave space for OpenSBI which typically occupies
+ * 0x80000000-0x801FFFFF on real hardware.
+ * LENGTH = 126M gives us plenty of RAM while accounting for OpenSBI space.
  * The linker will double check this to make sure everything can fit.
  */
 MEMORY
 {
-	ram   (wxa!ri) : ORIGIN = 0x80000000, LENGTH = 128M
+	ram   (wxa!ri) : ORIGIN = 0x80200000, LENGTH = 126M
 }
 
 /*
