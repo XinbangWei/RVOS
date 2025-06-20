@@ -1,0 +1,36 @@
+{
+    // RVOS项目的VSCode工作区设置
+    
+    // Rust Analyzer配置
+    "rust-analyzer.cargo.target": "riscv64gc-unknown-none-elf",
+    "rust-analyzer.checkOnSave.command": "clippy",
+    
+    // C/C++配置
+    "C_Cpp.default.cStandard": "c11",
+    "C_Cpp.default.compilerPath": "/usr/bin/riscv64-unknown-elf-gcc",
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/include",
+        "${workspaceFolder}/arch/riscv"
+    ],
+    "C_Cpp.default.defines": [
+        "__riscv",
+        "__riscv_xlen=64"
+    ],
+    
+    // 文件关联
+    "files.associations": {
+        "*.S": "asm",
+        "*.ld": "ld",
+        "Makefile*": "makefile"
+    },
+    
+    // 搜索和文件浏览器排除
+    "search.exclude": {
+        "**/target": true,
+        "**/build": true
+    },
+    "files.exclude": {
+        "**/target": true,
+        "**/build": true
+    }
+}

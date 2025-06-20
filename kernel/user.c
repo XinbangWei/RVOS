@@ -1,4 +1,5 @@
 #include "kernel.h"
+#include "rust_tasks.h"  // 包含Rust任务接口
 
 #define DELAY 1
 
@@ -107,13 +108,14 @@ void disable_pmp(void) {
 /* NOTICE: DON'T LOOP INFINITELY IN main() */
 void os_main(void)
 {
-	// 将测试任务添加到任务调度中，确保该任务在 U 模式下运行
-	task_create(test_syscalls_task, NULL, 1, DEFAULT_TIMESLICE);
-	// 继续添加其他用户任务或内核任务...
+	// C任务
+	task_create(test_syscalls_task, NULL, 2, DEFAULT_TIMESLICE);
+	task_create(rust_user_task2, (void *)2, 1, DEFAULT_TIMESLICE);
 	task_create(just_while, NULL, 129, DEFAULT_TIMESLICE);
 	task_create(user_task0, NULL, 128, DEFAULT_TIMESLICE);
 	task_create(user_task1, NULL, 128, DEFAULT_TIMESLICE);
-	task_create(user_task, (void *)2, 3, DEFAULT_TIMESLICE);
+	task_create(user_task, (void *)3, 3, DEFAULT_TIMESLICE);
 	task_create(user_task, (void *)3, 3, DEFAULT_TIMESLICE);
 	
+
 }

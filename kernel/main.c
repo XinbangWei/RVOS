@@ -1,4 +1,5 @@
 #include "kernel.h"
+#include "fdt.h"
 
 /*
  * Following functions SHOULD be called ONLY ONE time here,
@@ -16,6 +17,9 @@ extern struct context *current_ctx;
 
 void start_kernel(void)
 {
+    /* Initialize boot information from device tree */
+    boot_info_init();
+    
     uart_init();
     uart_puts("Hello, RVOS!\n");
 

@@ -1,10 +1,27 @@
 #include "kernel.h"
+#include "fdt.h"
+
+/* UART base address cache */
+static uint64_t uart_base_addr = 0;
 
 /*
- * The UART control registers are memory-mapped at address UART0. 
+ * Get UART base address from FDT cache, with lazy initialization
+ */
+static uint64_t get_uart_base(void) {
+    if (uart_base_addr == 0) {
+        uart_base_addr = fdt_get_uart_base();
+        if (uart_base_addr == 0) {
+            uart_base_addr = 0x10000000L;  /* Fallback to default UART0 */
+        }
+    }
+    return uart_base_addr;
+}
+
+/*
+ * The UART control registers are memory-mapped. 
  * This macro returns the address of one of the registers.
  */
-#define UART_REG(reg) ((volatile uint8_t *)(UART0 + reg))
+#define UART_REG(reg) ((volatile uint8_t *)(get_uart_base() + reg))
 
 /*
  * Reference

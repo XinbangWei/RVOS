@@ -1,0 +1,22 @@
+[package]
+name = "rvos_rust_tasks"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "rvos_rust_tasks"
+crate-type = ["staticlib"]
+
+[dependencies]
+
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1
+
+[profile.dev]
+panic = "abort"
+
+# Target specification for RISC-V bare metal
+[build]
+target = "riscv64gc-unknown-none-elf"

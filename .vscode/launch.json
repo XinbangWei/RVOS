@@ -1,7 +1,6 @@
 {
     "version": "0.2.0",
     "configurations": [
-
         {
             "name": "Debug RISC-V OS",
             "type": "cppdbg",
@@ -29,6 +28,28 @@
             ],
             "preLaunchTask": "start-qemu-server",
             "postDebugTask": "stop-qemu"
+        },
+        {
+            "name": "Debug RISC-V OS (Manual)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/os.elf",
+            "cwd": "${workspaceFolder}",
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb-multiarch",
+            "miDebuggerServerAddress": "localhost:1234",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set architecture to RISC-V 64-bit",
+                    "text": "set architecture riscv:rv64",
+                    "ignoreFailures": true
+                }
+            ]
         }
     ]
 }

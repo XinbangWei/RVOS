@@ -7,8 +7,16 @@ CC = ${CROSS_COMPILE}gcc
 OBJCOPY = ${CROSS_COMPILE}objcopy
 OBJDUMP = ${CROSS_COMPILE}objdump
 
+# Rust settings
+CARGO = cargo
+RUST_TARGET = riscv64gc-unknown-none-elf
+RUST_LIB_DIR = rust_tasks/target/$(RUST_TARGET)/release
+RUST_LIB = $(RUST_LIB_DIR)/librvos_rust_tasks.a
+
 # Compilation flags
 CFLAGS = -nostdlib -fno-builtin -march=rv64gc -mabi=lp64d -mcmodel=medany -g -Wall
+# Add SBI console support - uncomment to use SBI instead of direct UART
+# CFLAGS += -DUSE_SBI_CONSOLE
 
 # QEMU settings (keep for testing, but we'll target real hardware)
 QEMU = qemu-system-riscv64
@@ -37,6 +45,9 @@ SRCS_ASM = \
 SRCS_C = \
 	kernel/main.c \
 	drivers/uart.c \
+	drivers/sbi_uart.c \
+	kernel/fdt.c \
+	kernel/string.c \
 	kernel/printk.c \
 	mm/page.c \
 	kernel/sched.c \
@@ -57,7 +68,11 @@ OBJS_C = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRCS_C))))
 OBJS = $(OBJS_ASM) $(OBJS_C)
 
 # Default target
-all: $(OBJS) $(BUILD_DIR)/os.elf
+all: rust-lib $(OBJS) $(BUILD_DIR)/os.elf
+
+# Rust library build target
+rust-lib:
+	cd rust_tasks && $(CARGO) build --release --target $(RUST_TARGET)
 
 # Rule for compiling C files
 $(BUILD_DIR)/%.o: %.c
@@ -70,14 +85,15 @@ $(BUILD_DIR)/%.o: %.S
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 # Linking rule
-$(BUILD_DIR)/os.elf: $(OBJS)
-	$(CC) $(CFLAGS) -T os.ld $(OBJS) -o $@
+$(BUILD_DIR)/os.elf: $(OBJS) rust-lib
+	$(CC) $(CFLAGS) -T os.ld $(OBJS) $(RUST_LIB) -o $@
 	$(OBJCOPY) -O binary $@ $(BUILD_DIR)/os.bin
 	@$(OBJDUMP) -S $@ > os.txt
 
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -rf os.txt
+	cd rust_tasks && $(CARGO) clean
 
 run: all
 	@$(QEMU) -M ? | grep virt >/dev/null || exit
@@ -102,4 +118,4 @@ code: all
 txt: all
 	@$(OBJDUMP) -S $(BUILD_DIR)/os.elf > os.txt
 
-.PHONY: all clean run debug code txt
+.PHONY: all clean run debug code txt rust-lib

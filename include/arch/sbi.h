@@ -14,6 +14,12 @@
 #define SBI_REMOTE_SFENCE_VMA_ASID 0x07
 #define SBI_SHUTDOWN            0x08
 
+/* SBI return codes */
+#define SBI_SUCCESS             0
+#define SBI_ERR_FAILURE         -1
+#define SBI_ERR_NOT_SUPPORTED   -2
+#define SBI_ERR_INVALID_PARAM   -3
+
 /* SBI call wrapper */
 static inline long sbi_call(long fid, long arg0, long arg1, long arg2)
 {

@@ -1,24 +1,54 @@
 {
-  "name": "RISC-V Dev",
+  "name": "RVOS Development Environment (C + Rust)",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-  "postCreateCommand": "sudo apt update && sudo apt install -y gcc-riscv64-unknown-elf qemu-system-misc opensbi u-boot-qemu gdb-multiarch",
+  "features": {
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "latest",
+      "profile": "default"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
   "customizations": {
     "vscode": {
       "extensions": [
+        // Rust支持
+        "rust-lang.rust-analyzer",
+        // C/C++支持
+        "ms-vscode.cpptools",
+        // Git和协作
         "github.copilot",
         "github.copilot-chat",
-        "ms-ceintl.vscode-language-pack-zh-hans",
-        "ms-vscode.cmake-tools",
-        "ms-vscode.cpptools",
-        "ms-vscode.cpptools-extension-pack",
-        "ms-vscode.cpptools-themes",
-        "ms-vscode.makefile-tools",
-        "webfreak.debug",
-        "yzhang.markdown-all-in-one"
+        // 中文和文档
+        "ms-ceintl.vscode-language-pack-zh-hans"
       ],
       "settings": {
-        // 如果有额外 VS Code 设置，也可以写在这里
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "rust-analyzer.checkOnSave.command": "clippy",
+        "rust-analyzer.cargo.features": "all",
+        "rust-analyzer.cargo.target": "riscv64gc-unknown-none-elf",
+        "C_Cpp.default.cStandard": "c11",
+        "C_Cpp.default.cppStandard": "c++17",
+        "C_Cpp.default.compilerPath": "/usr/bin/riscv64-unknown-elf-gcc",
+        "editor.formatOnSave": true,
+        "editor.rulers": [
+          80,
+          100
+        ],
+        "files.trimTrailingWhitespace": true,
+        "files.associations": {
+          "*.S": "asm",
+          "*.ld": "ld"
+        }
       }
+    }
+  },
+  "forwardPorts": [
+    1234
+  ],
+  "portsAttributes": {
+    "1234": {
+      "label": "GDB Debug Port",
+      "onAutoForward": "notify"
     }
   }
 }

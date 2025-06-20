@@ -1,4 +1,4 @@
-name: RVOS CI
+name: RVOS CI (C + Rust)
 
 on:
   push:
@@ -8,22 +8,37 @@ on:
 
 jobs:
   build:
+    name: Build and Test RVOS
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
-    - name: Install RISC-V toolchain
+
+    - name: Install RISC-V toolchain and QEMU
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc-riscv64-unknown-elf
-        sudo apt-get install -y qemu-system-misc
-        
-    - name: Build OS kernel
-      run: |
-        make all
-        
+        sudo apt-get install -y \
+          gcc-riscv64-unknown-elf \
+          qemu-system-misc \
+          gdb-multiarch \
+          build-essential
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: riscv64gc-unknown-none-elf
+        override: true
+        components: clippy, rustfmt
+
+    - name: Run Rust clippy
+      working-directory: rust_tasks
+      run: cargo clippy --target riscv64gc-unknown-none-elf -- -D warnings
+
+    - name: Build OS kernel (C + Rust)
+      run: make all
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
