@@ -6,6 +6,8 @@ edition = "2021"
 [lib]
 name = "rvos_rust_tasks"
 crate-type = ["staticlib"]
+test = false
+harness = false
 
 [dependencies]
 
@@ -13,6 +15,8 @@ crate-type = ["staticlib"]
 panic = "abort"
 lto = true
 codegen-units = 1
+debug = true
+opt-level = 0  
 
 [profile.dev]
 panic = "abort"

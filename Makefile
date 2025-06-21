@@ -10,7 +10,7 @@ OBJDUMP = ${CROSS_COMPILE}objdump
 # Rust settings
 CARGO = cargo
 RUST_TARGET = riscv64gc-unknown-none-elf
-RUST_LIB_DIR = rust_tasks/target/$(RUST_TARGET)/release
+RUST_LIB_DIR = rust_tasks/target/$(RUST_TARGET)/debug
 RUST_LIB = $(RUST_LIB_DIR)/librvos_rust_tasks.a
 
 # Compilation flags
@@ -72,7 +72,7 @@ all: rust-lib $(OBJS) $(BUILD_DIR)/os.elf
 
 # Rust library build target
 rust-lib:
-	cd rust_tasks && $(CARGO) build --release --target $(RUST_TARGET)
+	cd rust_tasks && $(CARGO) build --target $(RUST_TARGET)
 
 # Rule for compiling C files
 $(BUILD_DIR)/%.o: %.c

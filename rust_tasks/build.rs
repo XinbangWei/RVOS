@@ -1,5 +1,3 @@
-use std::process::Command;
-
 fn main() {
     // 设置链接搜索路径
     println!("cargo:rustc-link-search=native=../build");
