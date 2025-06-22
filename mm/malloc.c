@@ -28,16 +28,6 @@ typedef struct mem_block
 static char memory_pool[MEMORY_POOL_SIZE];
 static mem_block *free_list = (void *)memory_pool;
 
-void *memset(void *ptr, int value, size_t num)
-{
-    unsigned char *p = ptr;
-    while (num--)
-    {
-        *p++ = (unsigned char)value;
-    }
-    return ptr;
-}
-
 void memory_init(void)
 {
     free_list->size = MEMORY_POOL_SIZE - sizeof(mem_block);

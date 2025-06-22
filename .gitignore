@@ -57,8 +57,8 @@ os.txt
 build/
 
 # Rust build artifacts
-rust_tasks/target/
-rust_tasks/Cargo.lock
+rust_core/target/
+rust_core/Cargo.lock
 *.rlib
 *.rmeta
 
@@ -84,3 +84,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+*.scr
+Image

@@ -14,7 +14,8 @@ sudo apt install -y \
     gdb-multiarch \
     git \
     curl \
-    wget
+    wget \
+    u-boot-tools
 
 # 安装Rust（如果features没有正确安装）
 if ! command -v rustc &> /dev/null; then

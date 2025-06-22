@@ -23,7 +23,6 @@ int sbi_uart_getc(void) {
 }
 
 /* Compatibility wrapper - can switch between direct and SBI */
-#ifdef USE_SBI_CONSOLE
 
 void uart_init(void) {
     sbi_uart_init();
@@ -46,4 +45,3 @@ void uart_isr(void) {
     /* This would need to be handled differently in a full implementation */
 }
 
-#endif /* USE_SBI_CONSOLE */

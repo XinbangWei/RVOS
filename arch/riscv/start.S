@@ -12,6 +12,10 @@ _start:
 	
 	# Save hart ID from a0 register (not from mhartid CSR)
 	mv	tp, a0			# keep CPU's hartid in its tp for later usage.
+
+	addi a0, a0, '0'
+	li a7, 0x1
+	ecall
 	
 	# Save hart ID and DTB address to our hart info system
 	# Store hartid to global variable
@@ -21,7 +25,7 @@ _start:
 	# Store DTB address to global variable  
 	la	t0, dtb_addr_asm
 	sd	a1, (t0)
-	
+
 	# TEMPORARY: Skip hart check to avoid restart loop
 	# TODO: Fix the exception handling that causes restart with non-zero hart ID
 	bnez	a0, park		# if we're not on the hart 0
@@ -52,6 +56,9 @@ _start:
 	j	start_kernel		# hart 0 jump to c
 
 park:
+	li a0, 'P'
+    li a7, 0x1
+    ecall
 	wfi
 	j	park
 	# In the standard RISC-V calling convention, the stack pointer sp

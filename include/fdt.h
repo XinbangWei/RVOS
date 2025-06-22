@@ -86,4 +86,9 @@ uint64_t fdt_get_clint_base(void);
 int fdt_get_cpu_count(void);
 uint64_t fdt_get_timebase_freq(void);
 
+/* Rust interface functions */
+uint64_t c_get_uart_base(void);
+uint64_t c_get_plic_base(void);
+uint64_t c_get_clint_base(void);
+
 #endif /* __FDT_H__ */

@@ -590,3 +590,16 @@ static int fdt_find_node_by_compatible(void *fdt, const char *compatible) {
     
     return -1;  /* Not found */
 }
+
+/* Rust interface functions - provide access to cached FDT data */
+uint64_t c_get_uart_base(void) {
+    return g_fdt_cache.uart.base_addr;
+}
+
+uint64_t c_get_plic_base(void) {
+    return g_fdt_cache.plic.base_addr;
+}
+
+uint64_t c_get_clint_base(void) {
+    return g_fdt_cache.clint.base_addr;
+}

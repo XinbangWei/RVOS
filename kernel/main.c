@@ -1,11 +1,13 @@
 #include "kernel.h"
 #include "fdt.h"
+#include "rust_interface.h"
+#include "kernel/boot_info.h"
 
 /*
  * Following functions SHOULD be called ONLY ONE time here,
  * so just declared here ONCE and NOT included in file os.h.
  */
-extern void uart_init(void);
+// extern void uart_init(void);  // Not needed when using SBI console
 extern void page_init(void);
 extern void sched_init(void);
 extern void schedule(void);
@@ -18,10 +20,13 @@ extern struct context *current_ctx;
 void start_kernel(void)
 {
     /* Initialize boot information from device tree */
-    boot_info_init();
+    //boot_info_init();
     
-    uart_init();
-    uart_puts("Hello, RVOS!\n");
+    /* Initialize hardware info from device tree using Rust */
+    //init_fdt_and_devices_rust(get_dtb_addr());
+    
+    /* Use SBI console instead of direct UART manipulation */
+    printf("Hello, RVOS!\n");
 
     page_init();
 
@@ -43,7 +48,7 @@ void start_kernel(void)
 
     kernel_scheduler();
 
-    uart_puts("Would not go here!\n");
+    printf("Would not go here!\n");
     while (1)
     {
     }; // stop here!
