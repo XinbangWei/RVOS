@@ -51,6 +51,31 @@
                 "start-qemu-server"
             ],
             "problemMatcher": []
+        },
+        {
+            "label": "Start OpenOCD",
+            "type": "shell",
+            "command": "openocd",
+            "args": ["-f", "mars_jtag.cfg"],
+            "group": "build",
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^(.*)$",
+                    "file": 1
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^Open On-Chip Debugger",
+                    "endsPattern": "Listening on port 3333 for gdb connections"
+                }
+            }
+        },
+        {
+            "label": "Stop OpenOCD",
+            "type": "shell",
+            "command": "pkill",
+            "args": ["-f", "openocd"]
         }
     ]
 }

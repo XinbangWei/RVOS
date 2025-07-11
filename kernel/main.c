@@ -17,6 +17,26 @@ extern void plic_init(void);
 extern void timer_init(void);
 extern struct context *current_ctx;
 
+/**
+ * @brief 内核的 C 语言入口函数
+ * @details
+ *   此函数由 `arch/riscv/start.S` 中的汇编代码在完成基本的硬件初始化后调用。
+ *   它的核心职责是初始化内核的各个关键子系统，创建初始任务，并启动调度器。
+ * 
+ * @callgraph
+ *   - `_start` (arch/riscv/start.S)
+ *     - 设置栈指针
+ *     - 清理 BSS 段
+ *     - 跳转到 `start_kernel`
+ *   - `start_kernel` (self)
+ *     - `page_init()`: 初始化页表和内存管理
+ *     - `trap_init()`: 设置陷阱向量表
+ *     - `plic_init()`: 初始化平台级中断控制器
+ *     - `timer_init()`: 初始化时钟中断
+ *     - `sched_init()`: 初始化调度器和任务数组
+ *     - `os_main()`: 创建用户态的初始任务
+ *     - `kernel_scheduler()`: 启动内核调度循环，永不返回
+ */
 void start_kernel(void)
 {
     /* Initialize boot information from device tree */
@@ -26,7 +46,7 @@ void start_kernel(void)
     //init_fdt_and_devices_rust(get_dtb_addr());
     
     /* Use SBI console instead of direct UART manipulation */
-    printf("Hello, RVOS!\n");
+    printk("Hello, RVOS!\n");
 
     page_init();
 
@@ -42,13 +62,11 @@ void start_kernel(void)
 
     os_main();
 
-    printf("kernel running\n");
-
     //disable_pmp(); // 禁用PMP，允许U-Mode访问所有内存
 
     kernel_scheduler();
 
-    printf("Would not go here!\n");
+    printk("Would not go here!\n");
     while (1)
     {
     }; // stop here!

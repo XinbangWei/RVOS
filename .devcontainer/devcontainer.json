@@ -11,15 +11,18 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        // Rust支持
-        "rust-lang.rust-analyzer",
-        // C/C++支持
         "ms-vscode.cpptools",
-        // Git和协作
+        "rust-lang.rust-analyzer",
+        "ms-ceintl.vscode-language-pack-zh-hans",
         "github.copilot",
         "github.copilot-chat",
-        // 中文和文档
-        "ms-ceintl.vscode-language-pack-zh-hans"
+        "github.vscode-github-actions",
+        "mhutchie.git-graph",
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "rust-lang.rust-analyzer",
+        "webfreak.debug",
+        "zhwu95.riscv"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash",

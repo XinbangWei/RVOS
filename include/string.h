@@ -1,6 +1,7 @@
 #ifndef __STRING_H__
 #define __STRING_H__
 
+#include <stddef.h>  // for size_t
 #include "kernel/types.h"
 
 /* NULL definition */
@@ -11,11 +12,7 @@
 /* For extra safety, you could define a const null pointer */
 #define CONST_NULL ((const void*)0)
 
-/* Use size_t from kernel/types.h or system headers */
-#ifndef _SIZE_T_DEFINED
-#define _SIZE_T_DEFINED
-/* size_t should be defined in kernel/types.h or included from stddef.h */
-#endif
+/* size_t is now defined in stddef.h */
 
 /* Debug version that might help catch errors */
 #ifdef DEBUG_NULL_ACCESS
@@ -34,5 +31,10 @@ char *strchr(const char *s, int c);
 char *strrchr(const char *s, int c);
 char *strstr(const char *haystack, const char *needle);
 char *strdup(const char *s);
+
+/* Memory functions (implemented in Rust) */
+void *memcpy(void *dest, const void *src, size_t n);
+void *memset(void *s, int c, size_t n);
+int memcmp(const void *s1, const void *s2, size_t n);
 
 #endif /* __STRING_H__ */

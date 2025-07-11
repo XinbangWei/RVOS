@@ -12,7 +12,7 @@
 #include "kernel/spinlock.h"
 #include "kernel/irq.h"
 #include "kernel/uart.h"
-#include "kernel/syscall.h"
+#include "kernel/syscalls.h"
 #include "kernel/boot_info.h"
 
 #include "stddef.h"

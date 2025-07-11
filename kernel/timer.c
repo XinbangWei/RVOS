@@ -66,8 +66,8 @@ void timer_delete(timer *timer)
 
 void run_timer_list()
 {
-    //printf("timer expired: %ld\n", timers->timeout_tick);
-    //printf("current tick: %ld\n", get_time());
+    //printk("timer expired: %ld\n", timers->timeout_tick);
+    //printk("current tick: %ld\n", get_time());
     while (timers != NULL && timers->timeout_tick <= get_time())
     {
         timer *expired = timers;
@@ -90,8 +90,8 @@ void run_timer_list()
 void timer_handler()
 {
     spin_lock();
-    printf("tick: %d\n", _tick++);
-    printf("time: %ld\n", get_time());
+    printk("tick: %d\n", _tick++);
+    printk("time: %ld\n", get_time());
     print_tasks();
     print_timers();
     // if (timers->func == timer_handler)
@@ -106,11 +106,11 @@ void timer_handler()
 /* 打印定时器链表信息的调试函数 */
 void print_timers(void)
 {
-    printf("\n=== Timer List Debug Info ===\n");
-    printf("Current time: %ld\n", get_time());
+    printk("\n=== Timer List Debug Info ===\n");
+    printk("Current time: %ld\n", get_time());
     if (timers == NULL)
     {
-        printf("Timer list is empty\n");
+        printk("Timer list is empty\n");
         return;
     }
 
@@ -119,8 +119,8 @@ void print_timers(void)
 
     while (current != NULL)
     {
-        printf("Timer[%d]:\n", count++);
-        printf("  timeout_tick: %ld\n", current->timeout_tick);
+        printk("Timer[%d]:\n", count++);
+        printk("  timeout_tick: %ld\n", current->timeout_tick);
         const char *func_name = "unknown";
         if (current->func == timer_handler)
         {
@@ -138,11 +138,11 @@ void print_timers(void)
             func_name = "schedule_wrapper";
         }
 
-        printf("  func name: %s\n", func_name);
-        printf("  arg: %p\n", current->arg);
-        printf("  next: %p\n", (void *)current->next);
+        printk("  func name: %s\n", func_name);
+        printk("  arg: %p\n", current->arg);
+        printk("  next: %p\n", (void *)current->next);
 
         current = current->next;
     }
-    printf("=== End of Timer List ===\n\n");
+    printk("=== End of Timer List ===\n\n");
 }

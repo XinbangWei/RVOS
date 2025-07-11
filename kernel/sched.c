@@ -43,6 +43,12 @@ void back_to_os(void)
 }
 
 //在 `sched_init` 中创建内核调度任务
+/**
+ * @brief 初始化调度器
+ * @details
+ *   此函数负责初始化任务数组、设置内核上下文以及启用软件中断，为任务调度做准备。
+ *   它在 `start_kernel` 期间被调用一次。
+ */
 void sched_init()
 {
 	// w_sscratch((reg_t)&kernel_ctx);  // Use supervisor scratch register
@@ -118,7 +124,7 @@ void schedule()
 	current_ctx = &(tasks[next_task].ctx);
 
 	tasks[current_task_id].state = TASK_RUNNING;
-	check_privilege_level();
+	//check_privilege_level();
 	switch_to(current_ctx);
 	spin_unlock();
 }
@@ -142,6 +148,28 @@ void schedule()
  * RETURN VALUE
  *  0: success
  *  -1: if error occurred
+ */
+/**
+ * @brief 创建一个新任务
+ * @details
+ *   此函数在 `tasks` 数组中找到一个空闲槽位，并为其设置任务入口点、栈、优先级和初始上下文。
+ *   关键步骤是设置 `ctx.sstatus` 寄存器，通过清除 `SSTATUS_SPP` 位来确保任务在用户模式下运行。
+ * 
+ * @param start_routin 任务的入口函数指针
+ * @param param 传递给任务入口函数的参数
+ * @param priority 任务优先级 (数字越小，优先级越高)
+ * @param timeslice 任务的时间片大小
+ * @return 成功则返回任务ID，失败返回-1
+ * 
+ * @callgraph
+ *   - `os_main()` (kernel/main.c)
+ *     - `task_create(user_task, ...)`
+ *   - `task_create` (self)
+ *     - 分配任务结构体 `task_t`
+ *     - 设置任务栈 `task_stack`
+ *     - 设置PC指向 `start_routin`
+ *     - 设置 `sstatus` 以切换到用户态
+ *     - 将任务状态设置为 `TASK_READY`
  */
 int task_create(void (*start_routin)(void *param), void *param, uint8_t priority, uint32_t timeslice)
 {
@@ -172,7 +200,7 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
 	tasks[_top].timeslice = timeslice;
 	tasks[_top].remaining_timeslice = timeslice;
 
-	printf("创建任务: %p\n", (void *)tasks[_top].func);
+	printk("创建任务: %p\n", (void *)tasks[_top].func);
 
 	//_top++;
 
@@ -196,25 +224,55 @@ void task_yield()
 
 	back_to_os();
 }
-/*
- * DESCRIPTION
- *  task_exit() causes the calling task to exit and be removed from the scheduler.
+/**
+ * @brief 获取当前硬件线程ID (Hart ID) 的核心实现。
+ * @details
+ *   这是一个内核内部函数，负责读取当前CPU的Hart ID。
+ *   它不进行参数验证，假定调用者已经处理了用户态指针的合法性。
+ * @param ptr_hid 指向存储Hart ID的用户态地址。
+ * @return 成功返回0，失败返回-1。
+ * @callgraph
+ *   - `sys_gethid()` (kernel/syscall.c)
  */
-void task_exit()
+long do_gethid(unsigned int *ptr_hid)
 {
-	spin_lock();
-	if (current_task_id != -1)
-	{
-		tasks[current_task_id].state = TASK_EXITED;
-		uart_puts("任务已退出，并被调度器回收。\n");
-	}
-	spin_unlock();
-	back_to_os();
-	// 如果所有任务都退出，内核可以进入空闲状态或重新启动
-	panic("所有任务已退出，系统终止。");
+    if (ptr_hid == 0) {
+        // 理论上，sys_gethid 应该已经验证过，但这里作为核心逻辑，可以保留防御性检查
+        printk("do_gethid: ptr_hid == NULL\n");
+        return -1;
+    }
+    *ptr_hid = r_tp(); // r_tp() 是获取Hart ID的RISC-V指令
+    return 0;
+}
+
+/**
+ * @brief 任务退出的核心实现。
+ * @details
+ *   这是一个内核内部函数，负责执行任务终止的所有核心逻辑。
+ *   它将任务状态设置为 `TASK_EXITED`，并触发调度器以切换到其他任务。
+ *   此函数通常不会返回，因为它会调度走当前任务。
+ * @param status 任务的退出状态码。
+ * @callgraph
+ *   - `sys_exit()` (kernel/syscall.c)
+ *   - 用户任务内部 (例如 `user_task()`)
+ *   - 内核内部需要终止任务的场景
+ */
+void do_exit(int status)
+{
+    spin_lock();
+    if (current_task_id != -1)
+    {
+        tasks[current_task_id].state = TASK_EXITED;
+        printk("Task %d exited with status %d.\n", current_task_id, status); // 使用printk
+    }
+    spin_unlock();
+    back_to_os(); // 触发调度
+    // 如果所有任务都退出，内核可以进入空闲状态或重新启动
+    panic("All tasks exited, system terminated."); // 如果调度失败，则panic
 }
 
 // 定时器回调函数，用于唤醒被延迟的任务
+
 void wake_up_task(void *arg)
 {
 	int task_id = (int)arg;
@@ -284,21 +342,21 @@ static const char *get_task_func_name(void (*func)(void *))
 /* 打印任务槽信息的调试函数 */
 void print_tasks(void)
 {
-	printf("\n=== Tasks Debug Info ===\n");
+	printk("\n=== Tasks Debug Info ===\n");
 
 	int active_tasks = 0;
 	for (int i = 0; i < MAX_TASKS; i++)
 	{
 		if (tasks[i].state != TASK_INVALID)
 		{
-			printf("Task[%d]:\n", i);
-			printf("  Function: %s\n", get_task_func_name(tasks[i].func));
+			printk("Task[%d]:\n", i);
+			printk("  Function: %s\n", get_task_func_name(tasks[i].func));
 			if (tasks[i].func == user_task)
 			{
 				int task_id = (int)(tasks[i].param);
-				printf("  Task ID: %d\n", task_id);
+				printk("  Task ID: %d\n", task_id);
 			}
-			printf("  Priority: %d\n", tasks[i].priority);
+			printk("  Priority: %d\n", tasks[i].priority);
 
 			const char *state_str;
 			switch (tasks[i].state)
@@ -319,15 +377,15 @@ void print_tasks(void)
 				state_str = "UNKNOWN";
 				break;
 			}
-			printf("  State: %s\n", state_str);
+			printk("  State: %s\n", state_str);
 			if (i == current_task_id)
 			{
-				printf("  [CURRENT]\n");
+				printk("  [CURRENT]\n");
 			}
-			printf("------------------\n");
+			printk("------------------\n");
 			active_tasks++;
 		}
 	}
-	printf("Active tasks: %d, Current: %d\n", active_tasks, current_task_id);
-	printf("=== End of Tasks Info ===\n\n");
+	printk("Active tasks: %d, Current: %d\n", active_tasks, current_task_id);
+	printk("=== End of Tasks Info ===\n\n");
 }

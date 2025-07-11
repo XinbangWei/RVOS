@@ -28,7 +28,9 @@
     "files.associations": {
         "*.S": "riscv",
         "*.ld": "ld",
-        "Makefile*": "makefile"
+        "Makefile*": "makefile",
+        "stdarg.h": "c",
+        "kernel.h": "c"
     },
     
     // 搜索和文件浏览器排除

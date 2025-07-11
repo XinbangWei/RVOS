@@ -3,7 +3,15 @@
         // 核心必需扩展
         "ms-vscode.cpptools",
         "rust-lang.rust-analyzer",
-        "ms-ceintl.vscode-language-pack-zh-hans"
-        
+        "ms-ceintl.vscode-language-pack-zh-hans",
+        "github.copilot",
+        "github.copilot-chat",
+        "github.vscode-github-actions",
+        "mhutchie.git-graph",
+        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack",
+        "rust-lang.rust-analyzer",
+        "webfreak.debug",
+        "zhwu95.riscv"
     ]
 }

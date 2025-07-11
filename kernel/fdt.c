@@ -173,7 +173,7 @@ static void parse_memory_info(void *fdt) {
     g_boot_info.memory_size = 128 * 1024 * 1024;  /* 128MB default */
     
     if (!fdt) {
-        printf("No FDT, using default memory config\n");
+        printk("No FDT, using default memory config\n");
         return;
     }
     
@@ -192,7 +192,7 @@ static void parse_memory_info(void *fdt) {
             
             /* Check if this is memory node */
             if (strncmp(node_name, "memory", 6) == 0) {
-                printf("Found memory node: %s\n", node_name);
+                printk("Found memory node: %s\n", node_name);
                 
                 /* Skip node name */
                 struct_ptr = (uint32_t *)(((uintptr_t)struct_ptr + name_len + 4) & ~3);
@@ -212,7 +212,7 @@ static void parse_memory_info(void *fdt) {
                             
                             g_boot_info.memory_start = addr;
                             g_boot_info.memory_size = size;
-                            printf("Memory from DT: start=0x%lx, size=0x%lx\n", addr, size);
+                            printk("Memory from DT: start=0x%lx, size=0x%lx\n", addr, size);
                             return;
                         }
                         
@@ -241,7 +241,7 @@ static void parse_memory_info(void *fdt) {
     }
     
 end_parse:
-    printf("Using memory config: start=0x%lx, size=0x%lx\n", 
+    printk("Using memory config: start=0x%lx, size=0x%lx\n", 
            g_boot_info.memory_start, g_boot_info.memory_size);
 }
 
@@ -251,7 +251,7 @@ static void parse_cpu_info(void *fdt) {
     g_boot_info.timebase_freq = 10000000;  /* 10MHz default */
     
     if (!fdt) {
-        printf("No FDT, using default CPU config\n");
+        printk("No FDT, using default CPU config\n");
         return;
     }
     
@@ -272,7 +272,7 @@ static void parse_cpu_info(void *fdt) {
             
             /* Check if this is cpus node */
             if (strcmp(node_name, "cpus") == 0) {
-                printf("Found cpus node\n");
+                printk("Found cpus node\n");
                 
                 /* Skip node name */
                 struct_ptr = (uint32_t *)(((uintptr_t)struct_ptr + name_len + 4) & ~3);
@@ -287,7 +287,7 @@ static void parse_cpu_info(void *fdt) {
                         
                         if (strcmp(prop_name, "timebase-frequency") == 0 && len == 4) {
                             g_boot_info.timebase_freq = be32_to_cpu(*struct_ptr);
-                            printf("Timebase frequency: %ld\n", g_boot_info.timebase_freq);
+                            printk("Timebase frequency: %ld\n", g_boot_info.timebase_freq);
                         }
                         
                         /* Skip property data */
@@ -330,7 +330,7 @@ end_cpu_parse:
     if (cpu_count > 0) {
         g_boot_info.cpu_count = cpu_count;
     }
-    printf("CPU config: count=%d, timebase=%ld\n",
+    printk("CPU config: count=%d, timebase=%ld\n",
            g_boot_info.cpu_count, g_boot_info.timebase_freq);
 }
 
@@ -340,16 +340,16 @@ void boot_info_init(void) {
     g_boot_info.hartid = boot_hartid_asm;
     g_boot_info.dtb_addr = dtb_addr_asm;
     
-    printf("Boot info: hartid=%ld, dtb=0x%lx\n", 
+    printk("Boot info: hartid=%ld, dtb=0x%lx\n", 
            g_boot_info.hartid, g_boot_info.dtb_addr);
     
     /* Check if we have a valid device tree */
     if (g_boot_info.dtb_addr && fdt_check_header((void *)g_boot_info.dtb_addr) == 0) {
-        printf("Valid device tree found\n");
+        printk("Valid device tree found\n");
         parse_memory_info((void *)g_boot_info.dtb_addr);
         parse_cpu_info((void *)g_boot_info.dtb_addr);
     } else {
-        printf("No valid device tree, using defaults\n");
+        printk("No valid device tree, using defaults\n");
         parse_memory_info(NULL);
         parse_cpu_info(NULL);
     }
@@ -363,7 +363,7 @@ void fdt_cache_init(void) {
     void *fdt = (void *)g_boot_info.dtb_addr;
     
     if (!fdt || fdt_check_header(fdt) != 0) {
-        printf("No valid FDT, using default device config\n");
+        printk("No valid FDT, using default device config\n");
         /* Set default values */
         strcpy(g_fdt_cache.uart.name, "uart0");
         g_fdt_cache.uart.base_addr = 0x10000000;
@@ -377,14 +377,14 @@ void fdt_cache_init(void) {
         return;
     }
     
-    printf("Parsing device tree and caching device info...\n");
+    printk("Parsing device tree and caching device info...\n");
     
     /* Parse and cache device information */
     parse_uart_info(fdt);
     parse_plic_info(fdt);
     parse_clint_info(fdt);
     
-    printf("Device tree cache initialized\n");
+    printk("Device tree cache initialized\n");
 }
 
 /* Parse UART information */
@@ -433,7 +433,7 @@ static void parse_uart_info(void *fdt) {
         strcpy(g_fdt_cache.uart.compatible, "ns16550a");
     }
     
-    printf("UART: base=0x%lx, size=0x%lx, irq=%d\n",
+    printk("UART: base=0x%lx, size=0x%lx, irq=%d\n",
            g_fdt_cache.uart.base_addr, g_fdt_cache.uart.size, g_fdt_cache.uart.irq);
 }
 
@@ -474,7 +474,7 @@ static void parse_plic_info(void *fdt) {
         strcpy(g_fdt_cache.plic.compatible, "riscv,plic0");
     }
     
-    printf("PLIC: base=0x%lx, size=0x%lx\n",
+    printk("PLIC: base=0x%lx, size=0x%lx\n",
            g_fdt_cache.plic.base_addr, g_fdt_cache.plic.size);
 }
 
@@ -515,7 +515,7 @@ static void parse_clint_info(void *fdt) {
         strcpy(g_fdt_cache.clint.compatible, "riscv,clint0");
     }
     
-    printf("CLINT: base=0x%lx, size=0x%lx\n",
+    printk("CLINT: base=0x%lx, size=0x%lx\n",
            g_fdt_cache.clint.base_addr, g_fdt_cache.clint.size);
 }
 

@@ -1,122 +1,28 @@
 use core::ffi::c_void;
 
-// 外部C函数声明 - 来自RVOS系统
-extern "C" {
-    // fn printf(format: *const u8, ...) -> i32;  // 已移除
-    fn task_delay(ticks: u32);
-    fn task_exit();
-    fn uart_puts(s: *const u8);
+/// A helper function to write a string slice to the console (fd=1).
+fn puts(s: &str) {
+    crate::write(1, s.as_ptr(), s.len());
 }
 
-// 辅助函数：将Rust字符串转换为C字符串
-fn rust_str_to_c_str(s: &str) -> *const u8 {
-    // 注意：这里我们假设字符串是以null结尾的
-    // 在实际应用中可能需要更复杂的处理
-    s.as_ptr()
-}
-
-// 辅助函数：安全地调用uart_puts
-fn rust_uart_puts(message: &str) {
-    unsafe {
-        uart_puts(rust_str_to_c_str(message));
-    }
-}
-
-// Rust版本的用户任务1 - 简单循环任务
-#[no_mangle]
-pub extern "C" fn rust_user_task1(_param: *mut c_void) {
-    rust_uart_puts("Rust Task 1: Created!\n\0");
-
-    let mut counter = 0u32;
-    loop {
-        rust_uart_puts("Rust Task 1: Running...\n\0");
-
-        counter += 1;
-        if counter > 5 {
-            rust_uart_puts("Rust Task 1: Finishing after 5 iterations\n\0");
-            break;
-        }
-
-        unsafe {
-            task_delay(1000); // 延迟1000个时钟周期
-        }
-    }
-
-    rust_uart_puts("Rust Task 1: Finished!\n\0");
-    unsafe {
-        task_exit();
-    }
-}
-
-// Rust版本的用户任务2 - 带参数的任务
+/// Rust version of a user task.
+/// This task demonstrates using syscalls from Rust.
 #[no_mangle]
 pub extern "C" fn rust_user_task2(_param: *mut c_void) {
-    rust_uart_puts("Rust Task 2: Created!\n\0");
+    puts("Rust Task 2: Created!\n");
 
-    rust_uart_puts("Rust Task 2: Working...\n\0");
-
-    rust_uart_puts("Rust Task 2: Finished!\n\0");
-
-    unsafe {
-        task_exit();
-    }
-}
-
-// Rust版本的系统调用测试任务
-#[no_mangle]
-pub extern "C" fn rust_syscall_test_task(_param: *mut c_void) {
-    rust_uart_puts("Rust Task: System call test starting...\n\0");
-
-    // 在这里我们可以展示Rust的内存安全特性
-    // 例如：安全的数组操作、借用检查等
-
-    let test_array = [1u32, 2, 3, 4, 5];
-    let mut _sum = 0u32;
-
-    // Rust的迭代器 - 比C循环更安全
-    for &value in test_array.iter() {
-        _sum += value;
+    for i in 0..5 {
+        let mut buf = [0u8; 32];
+        let s = "Rust Task 2: Running... iter \n";
+        // A simple way to show iteration count without full formatting
+        buf[..s.len()].copy_from_slice(s.as_bytes());
+        buf[s.len() - 2] = b'0' + i as u8;
+        puts(core::str::from_utf8(&buf[..s.len()]).unwrap_or(s));
+        
+        crate::r#yield(); // Yield the CPU
     }
 
-    rust_uart_puts("Rust Task: Array sum calculated safely\n\0");
+    puts("Rust Task 2: Finished!\n");
 
-    // 模拟一些计算工作
-    for _ in 0..3 {
-        rust_uart_puts("Rust Task: Processing...\n\0");
-        unsafe {
-            task_delay(500);
-        }
-    }
-
-    rust_uart_puts("Rust Task: System call test completed!\n\0");
-    unsafe {
-        task_exit();
-    }
-}
-
-// 展示Rust内存安全特性的任务
-#[no_mangle]
-pub extern "C" fn rust_memory_safe_task(_param: *mut c_void) {
-    rust_uart_puts("Rust Memory Safety Demo: Starting\n\0");
-
-    // 展示Rust的Option类型使用
-    let maybe_value: Option<u32> = Some(42);
-
-    match maybe_value {
-        Some(_value) => rust_uart_puts("Rust: Found value in Option\n\0"),
-        None => rust_uart_puts("Rust: Option is None\n\0"),
-    }
-
-    // 展示Result类型的错误处理
-    let result: Result<u32, &str> = Ok(100);
-
-    match result {
-        Ok(_value) => rust_uart_puts("Rust: Operation succeeded\n\0"),
-        Err(_error) => rust_uart_puts("Rust: Operation failed\n\0"),
-    }
-
-    rust_uart_puts("Rust Memory Safety Demo: Completed\n\0");
-    unsafe {
-        task_exit();
-    }
+    crate::exit(0); // Exit the task
 }
