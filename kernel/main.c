@@ -1,6 +1,6 @@
 #include "kernel.h"
 #include "fdt.h"
-#include "rust_interface.h"
+
 #include "kernel/boot_info.h"
 
 /*

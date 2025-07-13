@@ -1,6 +1,6 @@
 #include <stddef.h>  // for size_t
 #include "uapi/printf.h"
-#include "kernel/user_syscalls.h"  // 使用生成的系统调用声明
+#include "syscalls.h"  // 使用新的系统调用声明
 #include "string.h"
 
 #define PRINTF_BUF_SIZE 1024

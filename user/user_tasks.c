@@ -1,5 +1,5 @@
 #include "uapi/printf.h"
-#include "kernel/user_syscalls.h"  // 使用生成的系统调用声明
+#include "syscalls.h"  // 使用新的系统调用声明
 #include "uapi/user_tasks.h"
 
 #define DELAY 10000000

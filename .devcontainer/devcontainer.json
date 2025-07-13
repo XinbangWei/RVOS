@@ -1,18 +1,11 @@
 {
-  "name": "RVOS Development Environment (C + Rust)",
+  "name": "RVOS Development Environment (C only)",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-  "features": {
-    "ghcr.io/devcontainers/features/rust:1": {
-      "version": "latest",
-      "profile": "default"
-    }
-  },
   "postCreateCommand": "bash .devcontainer/setup.sh",
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-vscode.cpptools",
-        "rust-lang.rust-analyzer",
         "ms-ceintl.vscode-language-pack-zh-hans",
         "github.copilot",
         "github.copilot-chat",
@@ -20,15 +13,11 @@
         "mhutchie.git-graph",
         "ms-vscode.cpptools",
         "ms-vscode.cpptools-extension-pack",
-        "rust-lang.rust-analyzer",
         "webfreak.debug",
         "zhwu95.riscv"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash",
-        "rust-analyzer.checkOnSave.command": "clippy",
-        "rust-analyzer.cargo.features": "all",
-        "rust-analyzer.cargo.target": "riscv64gc-unknown-none-elf",
         "C_Cpp.default.cStandard": "c11",
         "C_Cpp.default.cppStandard": "c++17",
         "C_Cpp.default.compilerPath": "/usr/bin/riscv64-unknown-elf-gcc",

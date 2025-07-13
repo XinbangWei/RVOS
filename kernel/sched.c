@@ -257,7 +257,7 @@ long do_gethid(unsigned int *ptr_hid)
  *   - 用户任务内部 (例如 `user_task()`)
  *   - 内核内部需要终止任务的场景
  */
-void do_exit(int status)
+void task_exit(int status)
 {
     spin_lock();
     if (current_task_id != -1)
@@ -321,6 +321,15 @@ void task_delay(uint32_t ticks)
 
 	// 让出 CPU，触发调度
 	task_yield();
+}
+
+/**
+ * @brief 获取当前任务ID
+ * @return 当前任务的ID，如果没有当前任务则返回-1
+ */
+int get_current_task_id(void)
+{
+    return current_task_id;
 }
 
 /* 获取任务函数名称 */

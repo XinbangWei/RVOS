@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# RVOS DevContainer Setup Script
+# RVOS DevContainer Setup Script (C only)
 echo "🚀 Setting up RVOS development environment..."
 
 # 更新包管理器
@@ -15,25 +15,9 @@ sudo apt install -y \
     git \
     curl \
     wget \
-    u-boot-tools
-
-# 安装Rust（如果features没有正确安装）
-if ! command -v rustc &> /dev/null; then
-    echo "🦀 Installing Rust..."
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    source ~/.cargo/env
-fi
-
-# 添加RISC-V target
-echo "🎯 Adding RISC-V target for Rust..."
-rustup target add riscv64gc-unknown-none-elf
-
-# 安装useful cargo工具
-echo "🔧 Installing useful Cargo tools..."
-cargo install cargo-binutils
-rustup component add llvm-tools-preview
+    u-boot-tools \
+    build-essential
 
 echo "✅ RVOS development environment setup complete!"
-echo "🦀 Rust version: $(rustc --version)"
 echo "🔧 GCC RISC-V version: $(riscv64-unknown-elf-gcc --version | head -n1)"
 echo "🖥️  QEMU version: $(qemu-system-riscv64 --version | head -n1)"

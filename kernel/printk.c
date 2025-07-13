@@ -120,19 +120,6 @@ int vsnprintk(char * out, size_t n, const char* s, va_list vl)
  * @param len 待写入数据的长度。
  * @return 成功写入的字节数。
  */
-long do_write(int fd, const char *buf, size_t len)
-{
-    // 目前只支持stdout (fd=1)
-    if (fd != 1) {
-        return -1; // 不支持的文件描述符
-    }
-    
-    for (size_t i = 0; i < len; i++) {
-        sbi_console_putchar(buf[i]);
-    }
-    return len;
-}
-
 /**
  * @brief 使用可变参数列表的核心打印函数
  * @details
@@ -147,7 +134,10 @@ int vprintk(const char *fmt, va_list args)
     char buf[PRINTK_BUF_SIZE];
     int len = vsnprintk(buf, sizeof(buf), fmt, args);
     if (len > 0) {
-        do_write(1, buf, len);  // 使用stdout
+        // 直接输出到控制台
+        for (int i = 0; i < len; i++) {
+            sbi_console_putchar(buf[i]);
+        }
     }
     return len;
 }

@@ -1,31 +1,21 @@
 #include "kernel.h"
-#include "kernel/syscalls.h" // 引入SYSCALL_DEFINE_X宏
-#include "kernel/syscall_numbers.h"      // 引入系统调用号（由Rust生成）
-#include "kernel/do_functions.h"         // 引入do_函数声明（由Rust生成）
-#include "kernel/sched.h"    // 引入do_gethid和do_exit的声明
-#include "kernel/printk.h"   // 引入printk的声明
-#include "string.h"          // 引入memcpy
+#include "kernel/sched.h"
+#include "kernel/printk.h"
+#include "string.h"
+#include "arch/sbi.h"
+#include "syscalls.h"
 
-// 统一的系统调用函数指针类型，最多支持6个参数（RISC-V ABI）
-typedef long (*syscall_fn_t)(long, long, long, long, long, long);
+/* ==================== 系统调用实现 ==================== */
 
-// ================== 系统调用实现 ==================
-
-/**
- * @brief 系统调用：终止当前任务。
- */
-SYSCALL_DEFINE1(exit, int, status)
+void do_exit(int status)
 {
-    do_exit(status);
-    return 0; // Should not be reached
+    printk("Task %d exiting with status %d\n", get_current_task_id(), status);
+    task_exit(status);
 }
 
-#define MAX_WRITE_LEN 1024 // 单次write系统调用最大长度
+#define MAX_WRITE_LEN 1024
 
-/**
- * @brief 系统调用：向文件描述符写入数据。
- */
-SYSCALL_DEFINE3(write, int, fd, const char *, buf, size_t, len)
+long do_write(int fd, const void *buf, size_t len)
 {
     if (fd != 1) {
         printk("sys_write: Invalid file descriptor %d.\n", fd);
@@ -42,54 +32,48 @@ SYSCALL_DEFINE3(write, int, fd, const char *, buf, size_t, len)
     char k_buf[MAX_WRITE_LEN];
     memcpy(k_buf, buf, len);
 
-    return do_write(fd, k_buf, len);
+    for (size_t i = 0; i < len; i++) {
+        sbi_console_putchar(k_buf[i]);
+    }
+    return len;
 }
 
-/**
- * @brief 系统调用：让出CPU。
- */
-SYSCALL_DEFINE0(yield)
+long do_read(int fd, void *buf, size_t count)
+{
+    (void)fd; (void)buf; (void)count;
+    return -1; // 暂未实现
+}
+
+void do_yield(void)
 {
     schedule();
-    return 0;
 }
 
+int do_getpid(void)
+{
+    return get_current_task_id();
+}
 
-// ================== 系统调用表 ==================
+/* ==================== 系统调用分发 ==================== */
 
-#define SYSCALL(nr, func) [nr] = (syscall_fn_t)func,
-
-extern long sys_exit(int);
-extern long sys_write(int, const char *, size_t);
-extern long sys_yield(void);
-
-static syscall_fn_t syscall_table[] = {
-    [0] = NULL, // Syscall 0 is unused
-    SYSCALL(__NR_EXIT, sys_exit)
-    SYSCALL(__NR_WRITE, sys_write)
-    // __NR_read is not implemented yet
-    [__NR_YIELD] = (syscall_fn_t)sys_yield,
-};
-
-#define MAX_SYSCALL_NR (sizeof(syscall_table) / sizeof(syscall_table[0]))
-
-// ================== 分发函数 ==================
+// 生成系统调用表
+#define SYSCALL(name, ret_type, ...) [__NR_##name] = (void*)do_##name,
+static void* syscall_table[] = { [0] = NULL, SYSCALL_LIST };
+#undef SYSCALL
 
 void do_syscall(struct context *ctx)
 {
-    uint32_t syscall_num = ctx->a7;
-
-    if (syscall_num < MAX_SYSCALL_NR && syscall_table[syscall_num]) {
-        long a0 = ctx->a0;
-        long a1 = ctx->a1;
-        long a2 = ctx->a2;
-        long a3 = ctx->a3;
-        long a4 = ctx->a4;
-        long a5 = ctx->a5;
-
-        ctx->a0 = syscall_table[syscall_num](a0, a1, a2, a3, a4, a5);
-    } else {
-        printk("Unknown syscall no: %d.\n", syscall_num);
+    uint32_t num = ctx->a7;
+    
+    if (num <= 0 || num >= __NR_MAX || !syscall_table[num]) {
+        printk("Unknown syscall no: %d.\n", num);
         ctx->a0 = -1;
+        return;
     }
+    
+    // 统一调用接口（所有系统调用都用6个long参数）
+    typedef long (*syscall_fn_t)(long, long, long, long, long, long);
+    syscall_fn_t fn = (syscall_fn_t)syscall_table[num];
+    
+    ctx->a0 = fn(ctx->a0, ctx->a1, ctx->a2, ctx->a3, ctx->a4, ctx->a5);
 }

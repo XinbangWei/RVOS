@@ -1,4 +1,4 @@
-name: RVOS CI (C + Rust)
+name: RVOS CI (C only)
 
 on:
   push:
@@ -24,19 +24,7 @@ jobs:
           gdb-multiarch \
           build-essential
 
-    - name: Setup Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: riscv64gc-unknown-none-elf
-        override: true
-        components: clippy, rustfmt
-
-    - name: Run Rust clippy
-      working-directory: rust_tasks
-      run: cargo clippy --target riscv64gc-unknown-none-elf -- -D warnings
-
-    - name: Build OS kernel (C + Rust)
+    - name: Build OS kernel (C only)
       run: make all
 
     - name: Upload build artifacts

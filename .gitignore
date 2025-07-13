@@ -56,17 +56,10 @@ os.txt
 # Build directory
 build/
 
-# Auto-generated files (由 build.rs 自动生成)
+# Build-generated files
 include/kernel/syscall_numbers.h
 include/kernel/user_syscalls.h
 include/kernel/do_functions.h
-rust_core/src/generated_syscall_interface.rs
-
-# Rust build artifacts
-rust_core/target/
-rust_core/Cargo.lock
-*.rlib
-*.rmeta
 
 # Rust backup files
 **/*.rs.bk

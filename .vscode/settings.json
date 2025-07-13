@@ -1,16 +1,5 @@
 {
-    // RVOS项目的VSCode工作区设置
-    
-    // Rust Analyzer配置
-    "rust-analyzer.checkOnSave.enable": true,
-    "rust-analyzer.checkOnSave.overrideCommand": [
-        "cargo", "check", "--target", "riscv64gc-unknown-none-elf"
-    ],
-    "rust-analyzer.cargo.target": "riscv64gc-unknown-none-elf",
-    "rust-analyzer.cargo.features": "all",
-    "rust-analyzer.cargo.loadOutDirsFromCheck": true,
-    // 禁用因无 main 函数导致的诊断
-    "rust-analyzer.diagnostics.disabled": ["missing-main-function"],
+    // RVOS项目的VSCode工作区设置 (C only)
     
     // C/C++配置
     "C_Cpp.default.cStandard": "c11",
@@ -35,11 +24,9 @@
     
     // 搜索和文件浏览器排除
     "search.exclude": {
-        "**/target": true,
         "**/build": true
     },
     "files.exclude": {
-        "**/target": true,
         "**/build": true
     }
 }
