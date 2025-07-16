@@ -3,7 +3,7 @@
 #include "syscalls.h"  // 使用新的系统调用声明
 #include "string.h"
 
-#define PRINTF_BUF_SIZE 1024
+#define PRINTF_BUF_SIZE 256  // 减小到256字节
 
 // vsnprintf 的实现可以从内核的 printk.c 复制过来
 // 但为了保持用户态和内核态的隔离，我们在这里重新实现一份

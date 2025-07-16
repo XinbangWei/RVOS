@@ -19,6 +19,7 @@
     SYSCALL(read,   long, int fd, void *buf, size_t count) \
     SYSCALL(yield,  void) \
     SYSCALL(getpid, int) \
+    SYSCALL(sleep,  int, unsigned int seconds) \
 /* ===================== 自动生成部分 ===================== */
 
 // 生成系统调用号
@@ -39,5 +40,6 @@ SYSCALL_LIST
 // 内核系统调用分发函数
 struct context;
 extern void do_syscall(struct context *ctx);
+extern void verify_syscall_table(void);
 
 #endif /* _SYSCALLS_H */

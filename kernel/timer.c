@@ -66,19 +66,20 @@ void timer_delete(timer *timer)
 
 void run_timer_list()
 {
-    //printk("timer expired: %ld\n", timers->timeout_tick);
-    //printk("current tick: %ld\n", get_time());
+    // printk("timer expired: %ld\n", timers->timeout_tick);
+    // printk("current tick: %ld\n", get_time());
     while (timers != NULL && timers->timeout_tick <= get_time())
     {
         timer *expired = timers;
         timers = timers->next;
-        
+
         // 执行定时器回调
         expired->func(expired->arg);
-        
+
         // 释放定时器
         free(expired);
-    }    if (timers == NULL)
+    }
+    if (timers == NULL)
     {
         timer_create(schedule_wrapper, NULL, 1);
         spin_unlock();
@@ -90,14 +91,14 @@ void run_timer_list()
 void timer_handler()
 {
     spin_lock();
-    printk("tick: %d\n", _tick++);
-    printk("time: %ld\n", get_time());
-    print_tasks();
-    print_timers();
-    // if (timers->func == timer_handler)
-    // {
-    //     timer_create(timer_handler, NULL, 1);
-    // }
+    //printk("tick: %d\n", _tick++);
+    //printk("time: %ld\n", get_time());
+    // print_tasks();
+    // print_timers();
+    //  if (timers->func == timer_handler)
+    //  {
+    //      timer_create(timer_handler, NULL, 1);
+    //  }
     run_timer_list();
     spin_unlock();
     // check_timeslice();
@@ -133,7 +134,8 @@ void print_timers(void)
         else if (current->func == wake_up_task)
         {
             func_name = "wake_up_task";
-        }        else if (current->func == schedule_wrapper)
+        }
+        else if (current->func == schedule_wrapper)
         {
             func_name = "schedule_wrapper";
         }

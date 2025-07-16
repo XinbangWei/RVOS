@@ -32,4 +32,4 @@ jobs:
       with:
         name: rvos-build
         path: |
-          build/os.elf
+          Image

@@ -1,5 +1,6 @@
 #include "kernel.h"
 #include "fdt.h"
+#include "syscalls.h"
 
 #include "kernel/boot_info.h"
 
@@ -53,6 +54,8 @@ void start_kernel(void)
     memory_init(); // 初始化内存管理
 
     trap_init();
+
+    //verify_syscall_table(); // 初次验证系统调用表
 
     plic_init();
 

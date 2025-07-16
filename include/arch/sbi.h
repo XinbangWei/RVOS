@@ -61,6 +61,11 @@ static inline void sbi_clear_ipi(void)
     sbi_call(SBI_CLEAR_IPI, 0, 0, 0);
 }
 
+static inline void sbi_send_ipi(unsigned long hart_mask, unsigned long hart_mask_base)
+{
+    sbi_call(SBI_SEND_IPI, hart_mask, hart_mask_base, 0);
+}
+
 /* Get current time via SBI - note: this is not a standard SBI call
  * In practice, we might need to use rdtime instruction directly */
 static inline uint64_t sbi_get_time(void)

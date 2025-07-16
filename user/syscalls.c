@@ -37,3 +37,7 @@ void yield(void) {
 int getpid(void) {
     return (int)syscall_raw(__NR_getpid, 0, 0, 0, 0, 0, 0);
 }
+
+int sleep(unsigned int seconds) {
+    return (int)syscall_raw(__NR_sleep, seconds, 0, 0, 0, 0, 0);
+}

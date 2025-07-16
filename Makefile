@@ -56,7 +56,7 @@ BOOT_SCR   = boot.scr
 
 # --- QEMU ---
 QEMU   = qemu-system-riscv64
-QFLAGS = -nographic -smp 4 -machine virt
+QFLAGS = -nographic -smp 2 -machine virt
 
 # --- Source Files ---
 # Assembly files
@@ -97,7 +97,7 @@ USER_OBJS_C = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(USER_SRCS_
 OBJS     = $(OBJS_ASM) $(OBJS_C) $(USER_OBJS_C)
 
 # --- Targets ---
-all: $(OBJS) $(TARGET) $(IMAGE_BIN)
+all: $(OBJS) $(TARGET) $(IMAGE_BIN) txt
 	@echo "Build completed successfully"
 	@echo "Files generated:"
 	@echo "  - $(TARGET)     : ELF executable"

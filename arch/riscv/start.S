@@ -13,9 +13,14 @@ _start:
 	# Save hart ID from a0 register (not from mhartid CSR)
 	mv	tp, a0			# keep CPU's hartid in its tp for later usage.
 
-	addi a0, a0, '0'
-	li a7, 0x1
-	ecall
+	# addi a0, a0, '0'
+	# li a7, 0x1
+	# ecall
+	
+	# TEMPORARY: Skip hart check to avoid restart loop
+	# TODO: Fix the exception handling that causes restart with non-zero hart ID
+	bnez	a0, park		# if we're not on the hart 0
+					# we park the hart
 	
 	# Save hart ID and DTB address to our hart info system
 	# Store hartid to global variable
@@ -26,10 +31,6 @@ _start:
 	la	t0, dtb_addr_asm
 	sd	a1, (t0)
 
-	# TEMPORARY: Skip hart check to avoid restart loop
-	# TODO: Fix the exception handling that causes restart with non-zero hart ID
-	bnez	a0, park		# if we're not on the hart 0
-					# we park the hart
 	# Set all bytes in the BSS section to zero.
 	la	a0, _bss_start
 	la	a1, _bss_end
@@ -59,6 +60,20 @@ park:
 	li a0, 'P'
     li a7, 0x1
     ecall
+
+	# 假设我们想让 Hart 0 从 _start (0x80200000) 重新开始
+	# 并且把 DTB 地址 (假设在 t0) 传递给它
+	# 准备参数
+	li      a0, 0                   # 目标 Hart ID: 0
+	li      a1, 0x80200000          # 启动地址: _start
+	mv      a2, t0                  # 传递给 Hart 0 的参数 (DTB 地址)
+	# 准备 SBI 调用 ID
+	li      a7, 0x48534D            # HSM Extension
+	li      a6, 0                   # HART_START function
+	#
+	# 请求 M-mode 启动 Hart 0
+	ecall
+
 	wfi
 	j	park
 	# In the standard RISC-V calling convention, the stack pointer sp

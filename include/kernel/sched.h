@@ -80,6 +80,10 @@ extern void sys_switch(struct context *ctx_new);
 extern void print_tasks(void);
 extern void task_go(int i);
 
+/* global variables */
+extern int current_task_id;
+extern task_t tasks[];
+
 /* user tasks */
 extern void just_while(void *param);
 extern void user_task0(void *param);

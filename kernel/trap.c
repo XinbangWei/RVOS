@@ -1,5 +1,6 @@
 #include "kernel.h"
 #include "arch/sbi.h"
+#include "kernel/sched.h"  // 包含调度器头文件，获取extern声明
 
 extern void trap_vector(void);
 extern void uart_isr(void);
@@ -7,7 +8,6 @@ extern void timer_handler(void);
 extern void schedule(void);
 extern void do_syscall(struct context *ctx);
 
-extern task_t tasks[];
 extern int current_ctx;
 struct context context_inited = {0};
 
@@ -53,7 +53,7 @@ void trap_init()
 reg_t trap_handler(reg_t epc, reg_t cause, struct context *ctx)
 {	reg_t return_pc = epc;
 	reg_t cause_code = cause & 0xfff;
-	printk("trap_handler\n");
+	//printk("trap_handler\n");
 	if (cause & 0x8000000000000000ULL) // 64-bit interrupt flag
 	{
 		// 异步陷阱：中断处理
@@ -84,6 +84,11 @@ reg_t trap_handler(reg_t epc, reg_t cause, struct context *ctx)
 		{
 		case 2:
 			printk("Illegal instruction!\n");
+			printk("PC: 0x%lx, Cause: 0x%lx\n", epc, cause);
+			printk("Current task ID: %d\n", current_task_id);
+			if (current_task_id >= 0) {
+				printk("Task state: %d\n", tasks[current_task_id].state);
+			}
 			while (1);
 			break;
 		case 5:
@@ -95,14 +100,16 @@ reg_t trap_handler(reg_t epc, reg_t cause, struct context *ctx)
 			while(1);
 			break;
 		case 8:
-			printk("Environment call from U-mode!\n");
+			///printk("Environment call from U-mode!\n");
+			ctx->pc = epc + 4;
 			do_syscall(ctx);
-			return_pc += 4;
+			return_pc = ctx->pc;
 			break;
 		case 11:
 			//printk("Environment call from M-mode!\n");
+			ctx->pc = epc + 4;
 			do_syscall(ctx);
-			return_pc += 4;
+			return_pc = ctx->pc;
 			break;
 		default:
 			/* Synchronous trap - exception */

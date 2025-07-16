@@ -4,8 +4,8 @@
 extern void switch_to(struct context *next);
 
 #define MAX_TASKS 10
-#define STACK_SIZE 1024
-#define KERNEL_STACK_SIZE 1024
+#define STACK_SIZE 4096  // 增加到4KB
+#define KERNEL_STACK_SIZE 4096  // 增加到4KB
 // #define TASK_USABLE(i) (((tasks[(i)].state) == TASK_READY) || ((tasks[(i)].state) == TASK_RUNNING))
 // S-mode status register definitions
 #define SSTATUS_SPP_MASK (1 << 8)   // Supervisor Previous Privilege
@@ -21,7 +21,7 @@ uint8_t kernel_stack_kernel[KERNEL_STACK_SIZE];
 task_t tasks[MAX_TASKS];
 struct context kernel_ctx;
 static int _top = 0;
-static int current_task_id = -1;
+int current_task_id = -1;  // 移除static，让其他文件可以访问
 struct context *current_ctx;
 
 /*
@@ -69,16 +69,17 @@ void sched_init()
  */
 void schedule()
 {
-	spin_lock();
 	if (_top <= 0)
 	{
-		spin_unlock();
 		return;
 	}
 
 	int next_task = -1;
 	uint8_t highest_priority = 255;
-	if (tasks[current_task_id].state == TASK_RUNNING)
+	
+	// 安全检查：只有当current_task_id有效且任务状态为RUNNING时才设置为READY
+	if (current_task_id >= 0 && current_task_id < MAX_TASKS && 
+		tasks[current_task_id].state == TASK_RUNNING)
 		tasks[current_task_id].state = TASK_READY;
 
 	// 找到最高优先级
@@ -115,8 +116,7 @@ void schedule()
 
 	if (next_task == -1)
 	{
-		spin_unlock();
-		// panic("没有可调度的任务");
+		panic("没有可调度的任务");
 		return;
 	}
 
@@ -126,7 +126,6 @@ void schedule()
 	tasks[current_task_id].state = TASK_RUNNING;
 	//check_privilege_level();
 	switch_to(current_ctx);
-	spin_unlock();
 }
 
 // void check_timeslice()
@@ -222,7 +221,7 @@ void task_yield()
 	}
 	spin_unlock();
 
-	back_to_os();
+	schedule();
 }
 /**
  * @brief 获取当前硬件线程ID (Hart ID) 的核心实现。
@@ -263,7 +262,7 @@ void task_exit(int status)
     if (current_task_id != -1)
     {
         tasks[current_task_id].state = TASK_EXITED;
-        printk("Task %d exited with status %d.\n", current_task_id, status); // 使用printk
+        //printk("Task %d exited with status %d.\n", current_task_id, status); // 使用printk
     }
     spin_unlock();
     back_to_os(); // 触发调度
@@ -277,12 +276,10 @@ void wake_up_task(void *arg)
 {
 	int task_id = (int)arg;
 
-	spin_lock();
 	if (task_id >= 0 && task_id < MAX_TASKS && tasks[task_id].state == TASK_SLEEPING)
 	{
 		tasks[task_id].state = TASK_READY;
 	}
-	spin_unlock();
 }
 
 // void task_go(int i)
