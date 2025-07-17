@@ -3,8 +3,9 @@
 
 #include "stdarg.h"
 
-/* printf */
-extern int printf(const char *s, ...);
-extern void panic(char *s);
+/* Kernel console printing functions */
+int vprintk(const char *fmt, va_list args);
+int printk(const char *fmt, ...);
+void panic(const char *s);
 
 #endif /* __KERNEL_PRINTK_H__ */

@@ -52,3 +52,39 @@ Module.symvers
 Mkfile.old
 dkms.conf
 os.txt
+
+# Build directory
+build/
+
+# Build-generated files
+include/kernel/syscall_numbers.h
+include/kernel/user_syscalls.h
+include/kernel/do_functions.h
+
+# Rust backup files
+**/*.rs.bk
+
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+*.scr
+Image
+.gemini/
+tags

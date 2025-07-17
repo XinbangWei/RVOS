@@ -1,4 +1,4 @@
-name: RVOS CI
+name: RVOS CI (C only)
 
 on:
   push:
@@ -8,25 +8,29 @@ on:
 
 jobs:
   build:
+    name: Build and Test RVOS
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
-    - name: Install RISC-V toolchain
+
+    - name: Install RISC-V toolchain and QEMU
       run: |
         sudo apt-get update
-        sudo apt-get install -y gcc-riscv64-unknown-elf
-        sudo apt-get install -y qemu-system-misc
-        
-    - name: Build OS kernel
-      run: |
-        make all
-        
+        sudo apt-get install -y \
+          gcc-riscv64-unknown-elf \
+          qemu-system-misc \
+          gdb-multiarch \
+          u-boot-tools \
+          build-essential
+
+    - name: Build OS kernel (C only)
+      run: make all
+
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: rvos-build
         path: |
-          build/os.elf
+          Image

@@ -38,55 +38,43 @@
 
 /*
  * This machine puts platform-level interrupt controller (PLIC) here.
- * Here only list PLIC registers in Machine mode.
- * see https://github.com/qemu/qemu/blob/master/include/hw/riscv/virt.h
- * #define VIRT_PLIC_HART_CONFIG "MS"
- * #define VIRT_PLIC_NUM_SOURCES 127
- * #define VIRT_PLIC_NUM_PRIORITIES 7
- * #define VIRT_PLIC_PRIORITY_BASE 0x04
- * #define VIRT_PLIC_PENDING_BASE 0x1000
- * #define VIRT_PLIC_ENABLE_BASE 0x2000
- * #define VIRT_PLIC_ENABLE_STRIDE 0x80
- * #define VIRT_PLIC_CONTEXT_BASE 0x200000
- * #define VIRT_PLIC_CONTEXT_STRIDE 0x1000
- * #define VIRT_PLIC_SIZE(__num_context) \
- *     (VIRT_PLIC_CONTEXT_BASE + (__num_context) * VIRT_PLIC_CONTEXT_STRIDE)
+ * For S-mode, we need to use S-mode context registers instead of M-mode.
+ * QEMU virt machine PLIC configuration:
+ * - Hart 0 M-mode context: 0x200000
+ * - Hart 0 S-mode context: 0x201000  
+ * - Hart 1 M-mode context: 0x202000
+ * - Hart 1 S-mode context: 0x203000
+ * Pattern: M-mode context = 0x200000 + hart_id * 0x2000
+ *          S-mode context = 0x201000 + hart_id * 0x2000
  */
 #define PLIC_BASE 0x0c000000L
 #define PLIC_PRIORITY(id) (PLIC_BASE + (id) * 4)
 #define PLIC_PENDING(id) (PLIC_BASE + 0x1000 + ((id) / 32) * 4)
+
+/* M-mode PLIC registers (keep for reference) */
 #define PLIC_MENABLE(hart) (PLIC_BASE + 0x2000 + (hart) * 0x80)
 #define PLIC_MTHRESHOLD(hart) (PLIC_BASE + 0x200000 + (hart) * 0x1000)
 #define PLIC_MCLAIM(hart) (PLIC_BASE + 0x200004 + (hart) * 0x1000)
 #define PLIC_MCOMPLETE(hart) (PLIC_BASE + 0x200004 + (hart) * 0x1000)
 
+/* S-mode PLIC registers (what we should use in S-mode) */
+#define PLIC_SENABLE(hart) (PLIC_BASE + 0x2080 + (hart) * 0x80)
+#define PLIC_STHRESHOLD(hart) (PLIC_BASE + 0x201000 + (hart) * 0x1000)  
+#define PLIC_SCLAIM(hart) (PLIC_BASE + 0x201004 + (hart) * 0x1000)
+#define PLIC_SCOMPLETE(hart) (PLIC_BASE + 0x201004 + (hart) * 0x1000)
+
  /*
   * The Core Local INTerruptor (CLINT) block holds memory-mapped control and
   * status registers associated with software and timer interrupts.
+  * 
+  * NOTE: In S-mode, we should use SBI calls instead of direct CLINT access.
+  * These definitions are kept for reference and compatibility.
+  * 
   * QEMU-virt reuses sifive configuration for CLINT.
   * see https://gitee.com/qemu/qemu/blob/master/include/hw/riscv/sifive_clint.h
-  * enum {
-  * 	SIFIVE_SIP_BASE     = 0x0,
-  * 	SIFIVE_TIMECMP_BASE = 0x4000,
-  * 	SIFIVE_TIME_BASE    = 0xBFF8
-  * };
-  *
-  * enum {
-  * 	SIFIVE_CLINT_TIMEBASE_FREQ = 10000000
-  * };
-  *
-  * Notice:
-  * The machine-level MSIP bit of mip register are written by accesses to
-  * memory-mapped control registers, which are used by remote harts to provide
-  * machine-mode interprocessor interrupts.
-  * For QEMU-virt machine, Each msip register is a 32-bit wide WARL register
-  * where the upper 31 bits are tied to 0. The least significant bit is
-  * reflected in the MSIP bit of the mip CSR. We can write msip to generate
-  * machine-mode software interrupts. A pending machine-level software
-  * interrupt can be cleared by writing 0 to the MSIP bit in mip.
-  * On reset, each msip register is cleared to zero.
   */
 #define CLINT_BASE 0x2000000L
+/* Legacy M-mode CLINT registers - use SBI calls instead */
 #define CLINT_MSIP(hartid) (CLINT_BASE + 4 * (hartid))
 #define CLINT_MTIMECMP(hartid) (CLINT_BASE + 0x4000 + 8 * (hartid))
 #define CLINT_MTIME (CLINT_BASE + 0xBFF8) // cycles since boot.

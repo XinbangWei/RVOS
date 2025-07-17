@@ -36,13 +36,11 @@ struct context
 	reg_t s11;
 	reg_t t3;
 	reg_t t4;
-	reg_t t5;
-	reg_t t6;
+	reg_t t5;	reg_t t6;
 	// upon is trap frame
-
 	// save the pc to run in next schedule cycle
-	reg_t pc;	   // offset: 31 *4 = 124
-	reg_t mstatus; // 新增字段，用于保存 mstatus 寄存器
+	reg_t pc;	   // offset: 31 * 8 = 248 (64-bit)
+	reg_t sstatus; // S-mode status register (was mstatus) - offset: 32 * 8 = 256 (64-bit)
 };
 
 typedef enum
@@ -76,13 +74,18 @@ extern void check_timeslice(void);
 extern int task_create(void (*start_routin)(void *param), void *param, uint8_t priority, uint32_t timeslice);
 extern void task_delay(uint32_t count);
 extern void task_yield();
-extern void task_exit();
+extern void task_exit(int status);
+extern int get_current_task_id(void);
 extern void sys_switch(struct context *ctx_new);
 extern void print_tasks(void);
 extern void task_go(int i);
 
+/* global variables */
+extern int current_task_id;
+extern task_t tasks[];
+
 /* user tasks */
-extern void just_while(void);
+extern void just_while(void *param);
 extern void user_task0(void *param);
 extern void user_task1(void *param);
 extern void user_task(void *param);

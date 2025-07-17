@@ -1,104 +1,172 @@
 # RISC-V OS Makefile
-# Integrated common.mk settings
+# 
+# 主要目标:
+#   make        - 构建操作系统
+#   make clean  - 清理所有构建文件
+#   make run    - 在QEMU中运行操作系统
 
-# Cross-compilation toolchain
+# --- Toolchain ---
 CROSS_COMPILE = riscv64-unknown-elf-
-CC = ${CROSS_COMPILE}gcc
+CC      = ${CROSS_COMPILE}gcc
 OBJCOPY = ${CROSS_COMPILE}objcopy
 OBJDUMP = ${CROSS_COMPILE}objdump
+GDB     = gdb-multiarch
 
-# Compilation flags
-CFLAGS = -nostdlib -fno-builtin -march=rv32g -mabi=ilp32 -g -Wall
+# --- Flags ---
+K_CFLAGS   = -nostdlib -fno-builtin -march=rv64gc -mabi=lp64d -mcmodel=medany -g -Wall
+K_INCLUDES = -I include
+K_CFLAGS += -DUSE_SBI_CONSOLE
 
-# QEMU settings
-QEMU = qemu-system-riscv32
-QFLAGS = -nographic -smp 1 -machine virt -bios none
+# User CFLAGS (only include uapi headers)
+U_CFLAGS   = -nostdlib -fno-builtin -march=rv64gc -mabi=lp64d -mcmodel=medany -g -Wall
+U_INCLUDES = -I include
 
-# GDB settings
-GDB = gdb-multiarch
+# --- Build Paths ---
+BUILD_DIR  = build
+TARGET     = $(BUILD_DIR)/os.elf
+# RISC-V OS Makefile
+# 
+# 主要目标:
+#   make        - 构建操作系统
+#   make clean  - 清理所有构建文件
+#   make run    - 在QEMU中运行操作系统
 
-# Define the build directory
-BUILD_DIR = build
+# --- Toolchain ---
+CROSS_COMPILE = riscv64-unknown-elf-
+CC      = ${CROSS_COMPILE}gcc
+OBJCOPY = ${CROSS_COMPILE}objcopy
+OBJDUMP = ${CROSS_COMPILE}objdump
+GDB     = gdb-multiarch
 
-# Create the build directory if it doesn't exist
-$(shell mkdir -p $(BUILD_DIR))
+# --- Flags ---
+K_CFLAGS   = -nostdlib -fno-builtin -march=rv64gc -mabi=lp64d -mcmodel=medany -g -Wall
+K_INCLUDES = -I include
+K_CFLAGS += -DUSE_SBI_CONSOLE
 
-# Include directories
-INCLUDES = -I include
+# User CFLAGS
+U_CFLAGS   = -nostdlib -fno-builtin -march=rv64gc -mabi=lp64d -mcmodel=medany -g -Wall
+U_INCLUDES = -I include
 
-# Assembly sources
+# --- Build Paths ---
+BUILD_DIR  = build
+TARGET     = $(BUILD_DIR)/os.elf
+IMAGE_BIN  = Image
+BOOT_CMD   = boot.cmd
+BOOT_SCR   = boot.scr
+
+# --- QEMU ---
+QEMU   = qemu-system-riscv64
+QFLAGS = -nographic -smp 2 -machine virt
+
+# --- Source Files ---
+# Assembly files
 SRCS_ASM = \
 	arch/riscv/start.S \
-	arch/riscv/mem.S \
-	arch/riscv/usyscall.S \
-	arch/riscv/entry.S \
+	arch/riscv/mem.S  \
+	arch/riscv/context.S
 
-# C sources
+# Kernel Source Files
 SRCS_C = \
 	kernel/main.c \
-	drivers/uart.c \
+	kernel/fdt.c \
 	kernel/printk.c \
 	mm/page.c \
 	kernel/sched.c \
 	mm/malloc.c \
 	kernel/syscall.c \
-	kernel/user.c \
+	kernel/string.c \
 	kernel/trap.c \
 	drivers/plic.c \
 	kernel/timer.c \
 	kernel/spinlock.c \
 	kernel/algorithm.c \
+	kernel/boot_info.c \
+	kernel/user.c
 
-# Modify the object files to be placed in the build directory
+# User Source Files (C)
+USER_SRCS_C = \
+	user/printf.c \
+	user/syscalls.c \
+	user/user_tasks.c
+
+# --- Object Files ---
 OBJS_ASM = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRCS_ASM))))
-OBJS_C = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRCS_C))))
+OBJS_C   = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRCS_C))))
+USER_OBJS_C = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(USER_SRCS_C))))
 
-OBJS = $(OBJS_ASM) $(OBJS_C)
+OBJS     = $(OBJS_ASM) $(OBJS_C) $(USER_OBJS_C)
 
-# Default target
-all: $(OBJS) $(BUILD_DIR)/os.elf
+# --- Targets ---
+all: $(OBJS) $(TARGET) $(IMAGE_BIN) txt
+	@echo "Build completed successfully"
+	@echo "Files generated:"
+	@echo "  - $(TARGET)     : ELF executable"
+	@echo "  - $(IMAGE_BIN)  : Hardware boot image"
+	@echo "  - $(BOOT_SCR)   : Auto boot script for U-Boot"
 
-# Rule for compiling C files
+# Compile C files
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	$(CC) $(K_CFLAGS) $(K_INCLUDES) -c $< -o $@
 
-# Rule for assembling assembly files
+# Compile User C files
+$(BUILD_DIR)/user/%.o: user/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(U_CFLAGS) $(U_INCLUDES) -c $< -o $@
+
+# Compile User Assembly files
+$(BUILD_DIR)/user/%.o: user/%.S
+	@mkdir -p $(dir $@)
+	$(CC) $(U_CFLAGS) $(U_INCLUDES) -c $< -o $@
+
+# Compile Assembly files
 $(BUILD_DIR)/%.o: %.S
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+	$(CC) $(K_CFLAGS) $(K_INCLUDES) -c $< -o $@
 
-# Linking rule
-$(BUILD_DIR)/os.elf: $(OBJS)
-	$(CC) $(CFLAGS) -T os.ld $(OBJS) -o $@
-	$(OBJCOPY) -O binary $@ $(BUILD_DIR)/os.bin
-	@$(OBJDUMP) -S $@ > os.txt
+# Link
+$(TARGET): $(OBJS)
+	$(CC) $(K_CFLAGS) -T os.ld $(OBJS) -o $@
+	@echo "/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: $(TARGET) has a LOAD segment with RWX permissions"
 
+# Generate Image and boot.scr (real hardware)
+$(IMAGE_BIN): $(TARGET)
+	@echo "Generating Image and boot.scr..."
+	$(OBJCOPY) -O binary --set-start 0x80200000 $< $(IMAGE_BIN)
+	@echo "fatload mmc 1:1 0x80200000 $(IMAGE_BIN)" > $(BOOT_CMD)
+	@echo "go 0x80200000" >> $(BOOT_CMD)
+	mkimage -C none -A riscv -T script -d $(BOOT_CMD) $(BOOT_SCR)
+	@echo "Image and boot.scr generated successfully"
+	@echo "Copy both to SD card (FAT32) for auto boot"
+
+# Clean everything
 clean:
-	rm -rf $(BUILD_DIR)
-	rm -rf os.txt
+	rm -rf $(BUILD_DIR) os.txt $(IMAGE_BIN) $(BOOT_CMD) $(BOOT_SCR)
 
+# --- Debug and test targets ---
 run: all
 	@$(QEMU) -M ? | grep virt >/dev/null || exit
 	@echo "Press Ctrl-A and then X to exit QEMU"
 	@echo "------------------------------------"
-	@$(QEMU) $(QFLAGS) -kernel $(BUILD_DIR)/os.elf
+	@$(QEMU) $(QFLAGS) -kernel $(TARGET)
 
 qemu-gdb-server: all
 	@echo "Starting QEMU for GDB connection..."
 	@echo "QEMU GDB server will listen on port 1234"
-	@$(QEMU) $(QFLAGS) -kernel $(BUILD_DIR)/os.elf -s -S
+	@$(QEMU) $(QFLAGS) -kernel $(TARGET) -s -S
 
 debug: all
 	@echo "Press Ctrl-C and then input 'quit' to exit GDB and QEMU"
 	@echo "-------------------------------------------------------"
-	@$(QEMU) $(QFLAGS) -kernel $(BUILD_DIR)/os.elf -s -S &
-	@$(GDB) $(BUILD_DIR)/os.elf -q -x gdbinit
+	@$(QEMU) $(QFLAGS) -kernel $(TARGET) -s -S &
+	@$(GDB) $(TARGET) -q -x gdbinit
 
 code: all
-	@$(OBJDUMP) -S $(BUILD_DIR)/os.elf | less
+	@$(OBJDUMP) -S $(TARGET) | less
+
+.PHONY: all clean run qemu-gdb-server debug code
 
 txt: all
-	@$(OBJDUMP) -S $(BUILD_DIR)/os.elf > os.txt
+	@$(OBJDUMP) -S $(TARGET) > os.txt
 
-.PHONY: all clean run debug code txt
+.PHONY: all clean clean-generated regen run debug code txt rust-lib

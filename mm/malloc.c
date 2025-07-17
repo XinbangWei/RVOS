@@ -28,16 +28,6 @@ typedef struct mem_block
 static char memory_pool[MEMORY_POOL_SIZE];
 static mem_block *free_list = (void *)memory_pool;
 
-void *memset(void *ptr, int value, size_t num)
-{
-    unsigned char *p = ptr;
-    while (num--)
-    {
-        *p++ = (unsigned char)value;
-    }
-    return ptr;
-}
-
 void memory_init(void)
 {
     free_list->size = MEMORY_POOL_SIZE - sizeof(mem_block);
@@ -53,11 +43,11 @@ void *malloc(size_t size)
 
     size = ALIGN(size + sizeof(mem_block)); // 包括管理结构的大小
 
-    //printf("请求分配 %d 字节的内存\n", size);
+    //printk("请求分配 %d 字节的内存\n", size);
 
     while (current)
     {
-        //printf("检查块：地址=%p，大小=%d\n", (void *)current, current->size);
+        //printk("检查块：地址=%p，大小=%d\n", (void *)current, current->size);
         if (current->free && current->size >= size)
         {
             size_t current_block_free_space = current->size - size;
@@ -68,12 +58,12 @@ void *malloc(size_t size)
             }
         }
         current = current->next;
-        //printf("移动到下一个块：地址=%p\n", (void *)current);
+        //printk("移动到下一个块：地址=%p\n", (void *)current);
     }
 
     if (!best_fit_block)
     {
-        printf("错误：没有足够的空间分配 %d 字节的内存\n", size);
+        printk("错误：没有足够的空间分配 %d 字节的内存\n", size);
         return NULL; // 没有足够的空间
     }
 
@@ -100,9 +90,9 @@ void *malloc(size_t size)
     void *allocated_memory = (void *)(best_fit_block + 1);
     memset(allocated_memory, 0, best_fit_block->size - sizeof(mem_block));
 
-    //printf("分配了 %d 字节的内存\n", size);
-    //printf("分配后块：地址=%p，大小=%d\n", (void *)best_fit_block, best_fit_block->size);
-    //printf("新块：地址=%p，大小=%d\n\n", (void *)best_fit_block->next, best_fit_block->next ? best_fit_block->next->size : 0);
+    //printk("分配了 %d 字节的内存\n", size);
+    //printk("分配后块：地址=%p，大小=%d\n", (void *)best_fit_block, best_fit_block->size);
+    //printk("新块：地址=%p，大小=%d\n\n", (void *)best_fit_block->next, best_fit_block->next ? best_fit_block->next->size : 0);
     return allocated_memory;
 }
 
@@ -110,13 +100,13 @@ void free(void *ptr)
 {
     if (!ptr)
     {
-        printf("警告：尝试释放NULL指针\n");
+        printk("警告：尝试释放NULL指针\n");
         return;
     }
     mem_block *block_to_free = (mem_block *)((char *)ptr - sizeof(mem_block));
     block_to_free->free = 1;
 
-    //printf("释放块：地址=%p，大小=%d\n\n", (void *)block_to_free, block_to_free->size);
+    //printk("释放块：地址=%p，大小=%d\n\n", (void *)block_to_free, block_to_free->size);
 
     // 合并空闲块
     mem_block *current = free_list;
@@ -148,14 +138,14 @@ void free(void *ptr)
 void print_blocks(void)
 {
     void *block_ptr = memory_pool;
-    printf("-- start to print blocks --\n");
+    printk("-- start to print blocks --\n");
     do
     {
-        printf("\tblock: %p, size: %d, used: %d\n", block_ptr,
+        printk("\tblock: %p, size: %d, used: %d\n", block_ptr,
                block_get_size(block_ptr), block_is_used(block_ptr));
         block_ptr = block_get_next(block_ptr);
     } while (block_ptr);
-    printf("-- end to print blocks --\n");
+    printk("-- end to print blocks --\n");
 }
 
 void print_block(void *block_ptr)
@@ -166,11 +156,11 @@ void print_block(void *block_ptr)
     int *int_block_ptr = (int *)block_ptr;
     for (; int_block_ptr < block_end; int_block_ptr++, byte_count++)
     {
-        printf("%d", (*int_block_ptr));
+        printk("%d", (*int_block_ptr));
         if (byte_count % 4 == 0)
-            printf(" ");
+            printk(" ");
         if (byte_count % 32 == 0)
-            printf("\n");
+            printk("\n");
     }
-    printf("\n\n");
+    printk("\n\n");
 }

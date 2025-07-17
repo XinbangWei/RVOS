@@ -1,0 +1,15 @@
+{
+    "editor.formatOnSave": true,
+    "editor.rulers": [
+        80,
+        100
+    ],
+    "files.trimTrailingWhitespace": true,
+    "files.associations": {
+        "*.S": "asm",
+        "*.s": "asm",
+        "*.ld": "linker-script",
+        "*.dts": "c",
+        "*.dtsi": "c"
+    }
+}

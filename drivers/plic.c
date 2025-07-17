@@ -20,30 +20,22 @@ void plic_init(void)
 	*(uint32_t*)PLIC_PRIORITY(UART0_IRQ) = 1;
  
 	/*
-	 * Enable UART0
-	 *
-	 * Each global interrupt can be enabled by setting the corresponding 
-	 * bit in the enables registers.
+	 * Enable UART0 for S-mode context
+	 * Use S-mode enable register instead of M-mode
 	 */
-	*(uint32_t*)PLIC_MENABLE(hart)= (1 << UART0_IRQ);
+	*(uint32_t*)PLIC_SENABLE(hart) = (1 << UART0_IRQ);
 
 	/* 
-	 * Set priority threshold for UART0.
-	 *
-	 * PLIC will mask all interrupts of a priority less than or equal to threshold.
-	 * Maximum threshold is 7.
-	 * For example, a threshold value of zero permits all interrupts with
-	 * non-zero priority, whereas a value of 7 masks all interrupts.
-	 * Notice, the threshold is global for PLIC, not for each interrupt source.
+	 * Set priority threshold for UART0 in S-mode context
+	 * Use S-mode threshold register instead of M-mode
 	 */
-	*(uint32_t*)PLIC_MTHRESHOLD(hart) = 0;
+	*(uint32_t*)PLIC_STHRESHOLD(hart) = 0;
+	
+	/* enable supervisor-mode external interrupts. */
+	w_sie(r_sie() | SIE_SEIE);
 
-	/* enable machine-mode external interrupts. */
-	w_mie(r_mie() | MIE_MEIE);
-
-
-	/* enable machine-mode global interrupts. */
-	w_mstatus(r_mstatus() | MSTATUS_MIE);
+	/* enable supervisor-mode global interrupts. */
+	w_sstatus(r_sstatus() | SSTATUS_SIE);
 }
 
 /* 
@@ -61,7 +53,8 @@ void plic_init(void)
 int plic_claim(void)
 {
 	int hart = r_tp();
-	int irq = *(uint32_t*)PLIC_MCLAIM(hart);
+	/* Use S-mode claim register */
+	int irq = *(uint32_t*)PLIC_SCLAIM(hart);
 	return irq;
 }
 
@@ -78,5 +71,6 @@ int plic_claim(void)
 void plic_complete(int irq)
 {
 	int hart = r_tp();
-	*(uint32_t*)PLIC_MCOMPLETE(hart) = irq;
+	/* Use S-mode complete register */
+	*(uint32_t*)PLIC_SCOMPLETE(hart) = irq;
 }

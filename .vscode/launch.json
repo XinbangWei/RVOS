@@ -1,34 +1,43 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "QEMU Debug",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/os.elf",
+      "cwd": "${workspaceFolder}",
+      "miDebuggerPath": "gdb-multiarch",
+      "miDebuggerServerAddress": "localhost:1234",
+      "preLaunchTask": "Debug: Start QEMU",
+      "postDebugTask": "stop-qemu"
+    },
+    {
+      "name": "JTAG Debug",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/os.elf",
+      "cwd": "${workspaceFolder}",
+      "miDebuggerPath": "gdb-multiarch",
+      "miDebuggerServerAddress": "localhost:3333",
+      "preLaunchTask": "Start OpenOCD",
+      "postDebugTask": "Stop OpenOCD",
+      "setupCommands": [
         {
-            "name": "Debug RISC-V OS",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/os.elf",
-            "args": [],
-            "stopAtEntry": true,
-            "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "miDebuggerPath": "gdb-multiarch",
-            "miDebuggerServerAddress": "localhost:1234",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description": "Set architecture to RISC-V",
-                    "text": "set arch riscv:rv32",
-                    "ignoreFailures": true
-                }
-            ],
-            "preLaunchTask": "start-qemu-server",
-            "postDebugTask": "stop-qemu"
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Set architecture to RISC-V 64-bit",
+          "text": "set architecture riscv:rv64",
+          "ignoreFailures": false
         }
-    ]
+      ],
+      "targetArchitecture": "x64",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb"
+    }
+  ]
 }

@@ -3,6 +3,9 @@
 
 #include "kernel/types.h"
 
+// Forward declaration to avoid circular dependency
+uint64_t get_saved_hartid(void);
+
 /*
  * ref: https://github.com/mit-pdos/xv6-riscv/blob/riscv/kernel/riscv.h
  */
@@ -14,11 +17,11 @@ static inline reg_t r_tp()
 	return x;
 }
 
-/* which hart (core) is this? */
+/* which hart (core) is this? - Read mhartid CSR directly */
 static inline reg_t r_mhartid()
 {
 	reg_t x;
-	asm volatile("csrr %0, mhartid" : "=r" (x) );
+	asm volatile("csrr %0, mhartid" : "=r" (x));
 	return x;
 }
 
@@ -99,12 +102,111 @@ static inline reg_t r_mcause()
 	return x;
 }
 
-#define SCHEDULE                         \
-	{                                    \
-		int id = r_mhartid();            \
-		*(uint32_t *)CLINT_MSIP(id) = 1; \
-	}
+/* Supervisor Status Register, sstatus - S-mode equivalent of mstatus */
+#define SSTATUS_SPP (1 << 8)   // Supervisor Previous Privilege
+#define SSTATUS_SPIE (1 << 5)  // Supervisor Previous Interrupt Enable
+#define SSTATUS_SIE (1 << 1)   // Supervisor Interrupt Enable
+
+static inline reg_t r_sstatus()
+{
+	reg_t x;
+	asm volatile("csrr %0, sstatus" : "=r" (x) );
+	return x;
+}
+
+static inline void w_sstatus(reg_t x)
+{
+	asm volatile("csrw sstatus, %0" : : "r" (x));
+}
+
+/* Supervisor Exception Program Counter */
+static inline void w_sepc(reg_t x)
+{
+	asm volatile("csrw sepc, %0" : : "r" (x));
+}
+
+static inline reg_t r_sepc()
+{
+	reg_t x;
+	asm volatile("csrr %0, sepc" : "=r" (x) );
+	return x;
+}
+
+/* S-mode tvec register */
+static inline void w_stvec(reg_t x)
+{
+	asm volatile("csrw stvec, %0" : : "r" (x));
+}
+
+/* S-mode scratch register */
+static inline void w_sscratch(reg_t x)
+{
+	asm volatile("csrw sscratch, %0" : : "r" (x));
+}
+
+/* Supervisor Interrupt Enable */
+static inline reg_t r_sie()
+{
+	reg_t x;
+	asm volatile("csrr %0, sie" : "=r" (x) );
+	return x;
+}
+
+static inline void w_sie(reg_t x)
+{
+	asm volatile("csrw sie, %0" : : "r" (x));
+}
+
+/* S-mode interrupt enable bits */
+#define SIE_SEIE (1 << 9)  /* Supervisor external interrupt enable */
+#define SIE_STIE (1 << 5)  /* Supervisor timer interrupt enable */
+#define SIE_SSIE (1 << 1)  /* Supervisor software interrupt enable */
+
+/* Supervisor Cause Register */
+static inline reg_t r_scause()
+{
+	reg_t x;
+	asm volatile("csrr %0, scause" : "=r" (x) );
+	return x;
+}
+
+/* Supervisor Trap Value */
+static inline reg_t r_stval()
+{
+	reg_t x;
+	asm volatile("csrr %0, stval" : "=r" (x) );
+	return x;
+}
+
+/* Hart ID through tp register (set by OpenSBI in start.S) */
+static inline reg_t r_hartid()
+{
+	reg_t x;
+	asm volatile("mv %0, tp" : "=r" (x) );
+	return x;
+}
+
+#define SCHEDULE do { \
+    extern void schedule(void); \
+    schedule(); \
+} while(0);
 
 extern void disable_pmp(void);
+
+/* S-mode CSR access macros */
+#define w_stvec(x) asm volatile("csrw stvec, %0" : : "r" (x))
+#define w_sscratch(x) asm volatile("csrw sscratch, %0" : : "r" (x))
+
+#define read_csr_sie() ({ \
+    reg_t __tmp; \
+    asm volatile("csrr %0, sie" : "=r" (__tmp)); \
+    __tmp; \
+})
+
+#define write_csr_sie(x) asm volatile("csrw sie, %0" : : "r" (x))
+
+// Rename the inline functions to avoid conflicts
+#define r_sie() read_csr_sie()
+#define w_sie(x) write_csr_sie(x)
 
 #endif /* __RISCV_H__ */
