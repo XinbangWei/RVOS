@@ -1,8 +1,9 @@
 #include "kernel.h"
 #include "fdt.h"
 #include "syscalls.h"
-
 #include "kernel/boot_info.h"
+#include "kernel/hart.h"
+#include "arch/sbi.h"
 
 /*
  * Following functions SHOULD be called ONLY ONE time here,
@@ -48,6 +49,13 @@ void start_kernel(void)
     
     /* Use SBI console instead of direct UART manipulation */
     printk("Hello, RVOS!\n");
+    
+    /* Display hart information */
+    long current_hartid = sbi_get_hartid();
+    printk("RVOS: Starting kernel on Hart %ld\n", current_hartid);
+    
+    /* Display all hart status using Hart management */
+    hart_print_status_all();
 
     page_init();
 

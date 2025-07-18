@@ -4,7 +4,6 @@
             "name": "RISC-V OS",
             "compilerPath": "/usr/bin/riscv64-unknown-elf-gcc",
             "includePath": [
-                "${workspaceFolder}/include",
                 "${workspaceFolder}/**"
             ],
             "cStandard": "c11",

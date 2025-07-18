@@ -11,7 +11,6 @@
 #include "kernel/timer.h"
 #include "kernel/spinlock.h"
 #include "kernel/irq.h"
-#include "kernel/uart.h"
 #include "syscalls.h"
 #include "kernel/boot_info.h"
 

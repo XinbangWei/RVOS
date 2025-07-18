@@ -46,22 +46,33 @@ int vsnprintk(char * out, size_t n, const char* s, va_list vl)
 				format = 0;
 				break;
 			}
+			case 'u':
 			case 'd': {
-				long num = longarg ? va_arg(vl, long) : va_arg(vl, int);
-				if (num < 0) {
-					num = -num;
-					if (out && pos < n) {
-						out[pos] = '-';
+				unsigned long num_to_print;
+
+				if (*s == 'd') {
+					long num = longarg ? va_arg(vl, long) : va_arg(vl, int);
+					if (num < 0) {
+						num_to_print = -num;
+						if (out && pos < n) {
+							out[pos] = '-';
+						}
+						pos++;
+					} else {
+						num_to_print = num;
 					}
-					pos++;
+				} else {
+					num_to_print = longarg ? va_arg(vl, unsigned long) : va_arg(vl, unsigned int);
 				}
+
 				long digits = 1;
-				for (long nn = num; nn /= 10; digits++);
-				for (int i = digits-1; i >= 0; i--) {
+				for (unsigned long nn = num_to_print; nn /= 10; digits++);
+				
+				for (int i = digits - 1; i >= 0; i--) {
 					if (out && pos + i < n) {
-						out[pos + i] = '0' + (num % 10);
+						out[pos + i] = '0' + (num_to_print % 10);
 					}
-					num /= 10;
+					num_to_print /= 10;
 				}
 				pos += digits;
 				longarg = 0;

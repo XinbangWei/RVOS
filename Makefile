@@ -1,51 +1,35 @@
 # RISC-V OS Makefile
-# 
+#
 # 主要目标:
 #   make        - 构建操作系统
 #   make clean  - 清理所有构建文件
 #   make run    - 在QEMU中运行操作系统
+#   make wall   - 使用严格的警告选项进行构建
 
 # --- Toolchain ---
-CROSS_COMPILE = riscv64-unknown-elf-
+CROSS_COMPILE ?= riscv64-unknown-elf-
 CC      = ${CROSS_COMPILE}gcc
 OBJCOPY = ${CROSS_COMPILE}objcopy
 OBJDUMP = ${CROSS_COMPILE}objdump
 GDB     = gdb-multiarch
 
 # --- Flags ---
-K_CFLAGS   = -nostdlib -fno-builtin -march=rv64gc -mabi=lp64d -mcmodel=medany -g -Wall
-K_INCLUDES = -I include
-K_CFLAGS += -DUSE_SBI_CONSOLE
+# Base CFLAGS used for both kernel and user code
+CFLAGS_BASE = -nostdlib -fno-builtin -march=rv64gc -mabi=lp64d -mcmodel=medany -g
 
-# User CFLAGS (only include uapi headers)
-U_CFLAGS   = -nostdlib -fno-builtin -march=rv64gc -mabi=lp64d -mcmodel=medany -g -Wall
-U_INCLUDES = -I include
+# Warning flags. Can be overridden from the command line.
+# e.g., 'make CFLAGS_WARN="-Wall -Wextra"'
+CFLAGS_WARN ?= -Wall
 
-# --- Build Paths ---
-BUILD_DIR  = build
-TARGET     = $(BUILD_DIR)/os.elf
-# RISC-V OS Makefile
-# 
-# 主要目标:
-#   make        - 构建操作系统
-#   make clean  - 清理所有构建文件
-#   make run    - 在QEMU中运行操作系统
+# Stricter warnings for the 'wall' target
+CFLAGS_WARN_STRICT = -Wall -Wextra -Werror -Wshadow -Wpointer-arith -Wcast-qual -Wmissing-prototypes -Wformat=2 -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function
 
-# --- Toolchain ---
-CROSS_COMPILE = riscv64-unknown-elf-
-CC      = ${CROSS_COMPILE}gcc
-OBJCOPY = ${CROSS_COMPILE}objcopy
-OBJDUMP = ${CROSS_COMPILE}objdump
-GDB     = gdb-multiarch
+# Includes
+INCLUDES = -I include
 
-# --- Flags ---
-K_CFLAGS   = -nostdlib -fno-builtin -march=rv64gc -mabi=lp64d -mcmodel=medany -g -Wall
-K_INCLUDES = -I include
-K_CFLAGS += -DUSE_SBI_CONSOLE
-
-# User CFLAGS
-U_CFLAGS   = -nostdlib -fno-builtin -march=rv64gc -mabi=lp64d -mcmodel=medany -g -Wall
-U_INCLUDES = -I include
+# Final CFLAGS for kernel and user code
+K_CFLAGS = $(CFLAGS_BASE) $(CFLAGS_WARN) $(INCLUDES) -DUSE_SBI_CONSOLE
+U_CFLAGS = $(CFLAGS_BASE) $(CFLAGS_WARN) $(INCLUDES)
 
 # --- Build Paths ---
 BUILD_DIR  = build
@@ -56,7 +40,7 @@ BOOT_SCR   = boot.scr
 
 # --- QEMU ---
 QEMU   = qemu-system-riscv64
-QFLAGS = -nographic -smp 2 -machine virt
+QFLAGS = -nographic -smp 3 -machine virt
 
 # --- Source Files ---
 # Assembly files
@@ -70,18 +54,19 @@ SRCS_C = \
 	kernel/main.c \
 	kernel/fdt.c \
 	kernel/printk.c \
-	mm/page.c \
 	kernel/sched.c \
-	mm/malloc.c \
 	kernel/syscall.c \
 	kernel/string.c \
 	kernel/trap.c \
-	drivers/plic.c \
 	kernel/timer.c \
 	kernel/spinlock.c \
 	kernel/algorithm.c \
 	kernel/boot_info.c \
-	kernel/user.c
+	kernel/user.c \
+	kernel/hart.c \
+	mm/page.c \
+	mm/malloc.c \
+	drivers/plic.c
 
 # User Source Files (C)
 USER_SRCS_C = \
@@ -97,39 +82,38 @@ USER_OBJS_C = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(USER_SRCS_
 OBJS     = $(OBJS_ASM) $(OBJS_C) $(USER_OBJS_C)
 
 # --- Targets ---
-all: $(OBJS) $(TARGET) $(IMAGE_BIN) txt
+all: $(TARGET) $(IMAGE_BIN) txt
 	@echo "Build completed successfully"
 	@echo "Files generated:"
 	@echo "  - $(TARGET)     : ELF executable"
 	@echo "  - $(IMAGE_BIN)  : Hardware boot image"
 	@echo "  - $(BOOT_SCR)   : Auto boot script for U-Boot"
+	@echo "  - os.txt        : Disassembled code"
 
-# Compile C files
-$(BUILD_DIR)/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $(K_CFLAGS) $(K_INCLUDES) -c $< -o $@
-
-# Compile User C files
-$(BUILD_DIR)/user/%.o: user/%.c
-	@mkdir -p $(dir $@)
-	$(CC) $(U_CFLAGS) $(U_INCLUDES) -c $< -o $@
-
-# Compile User Assembly files
-$(BUILD_DIR)/user/%.o: user/%.S
-	@mkdir -p $(dir $@)
-	$(CC) $(U_CFLAGS) $(U_INCLUDES) -c $< -o $@
-
-# Compile Assembly files
-$(BUILD_DIR)/%.o: %.S
-	@mkdir -p $(dir $@)
-	$(CC) $(K_CFLAGS) $(K_INCLUDES) -c $< -o $@
-
-# Link
+# Link the final ELF file
 $(TARGET): $(OBJS)
-	$(CC) $(K_CFLAGS) -T os.ld $(OBJS) -o $@
-	@echo "/usr/lib/gcc/riscv64-unknown-elf/13.2.0/../../../riscv64-unknown-elf/bin/ld: warning: $(TARGET) has a LOAD segment with RWX permissions"
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS_BASE) -T os.ld $(OBJS) -o $@
+	@echo "Warning: $(TARGET) may have a LOAD segment with RWX permissions. This is common for simple loaders."
 
-# Generate Image and boot.scr (real hardware)
+# --- Compilation Rules ---
+# Rule for Kernel C files
+$(OBJS_C): $(BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(K_CFLAGS) -c $< -o $@
+
+# Rule for User C files
+$(USER_OBJS_C): $(BUILD_DIR)/user/%.o: user/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(U_CFLAGS) -c $< -o $@
+
+# Rule for Assembly files
+$(OBJS_ASM): $(BUILD_DIR)/%.o: %.S
+	@mkdir -p $(dir $@)
+	$(CC) $(K_CFLAGS) -c $< -o $@
+
+# --- Hardware Image Generation ---
+# Generate Image and boot.scr (for real hardware)
 $(IMAGE_BIN): $(TARGET)
 	@echo "Generating Image and boot.scr..."
 	$(OBJCOPY) -O binary --set-start 0x80200000 $< $(IMAGE_BIN)
@@ -139,34 +123,47 @@ $(IMAGE_BIN): $(TARGET)
 	@echo "Image and boot.scr generated successfully"
 	@echo "Copy both to SD card (FAT32) for auto boot"
 
+# --- Utility Targets ---
 # Clean everything
 clean:
-	rm -rf $(BUILD_DIR) os.txt $(IMAGE_BIN) $(BOOT_CMD) $(BOOT_SCR)
+	rm -rf $(BUILD_DIR) os.txt $(IMAGE_BIN) $(BOOT_CMD) $(BOOT_SCR) wall_warnings.log
 
-# --- Debug and test targets ---
+# Run in QEMU
 run: all
 	@$(QEMU) -M ? | grep virt >/dev/null || exit
 	@echo "Press Ctrl-A and then X to exit QEMU"
 	@echo "------------------------------------"
 	@$(QEMU) $(QFLAGS) -kernel $(TARGET)
 
+# Generate disassembled text file
+txt: $(TARGET)
+	@$(OBJDUMP) -S $(TARGET) > os.txt
+
+# View disassembled code in 'less'
+code: $(TARGET)
+	@$(OBJDUMP) -S $(TARGET) | less
+
+# --- Debug and Test Targets ---
+# Strictly compile the project, treating warnings as errors
+wall:
+	@echo "Testing compilation with strict warnings..."
+	@echo "This will treat warnings as errors and log output to wall_warnings.log"
+	@echo "-----------------------------------------------------------------------"
+	@$(MAKE) clean > /dev/null
+	@($(MAKE) -k all CFLAGS_WARN="$(CFLAGS_WARN_STRICT)" > wall_warnings.log 2>&1) || true
+	@echo "Strict compilation finished. Check wall_warnings.log for details."
+
+# Start QEMU and wait for a GDB connection
 qemu-gdb-server: all
 	@echo "Starting QEMU for GDB connection..."
 	@echo "QEMU GDB server will listen on port 1234"
 	@$(QEMU) $(QFLAGS) -kernel $(TARGET) -s -S
 
+# Start QEMU and GDB for a debugging session
 debug: all
 	@echo "Press Ctrl-C and then input 'quit' to exit GDB and QEMU"
 	@echo "-------------------------------------------------------"
 	@$(QEMU) $(QFLAGS) -kernel $(TARGET) -s -S &
 	@$(GDB) $(TARGET) -q -x gdbinit
 
-code: all
-	@$(OBJDUMP) -S $(TARGET) | less
-
-.PHONY: all clean run qemu-gdb-server debug code
-
-txt: all
-	@$(OBJDUMP) -S $(TARGET) > os.txt
-
-.PHONY: all clean clean-generated regen run debug code txt rust-lib
+.PHONY: all clean run wall qemu-gdb-server debug code txt

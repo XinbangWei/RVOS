@@ -20,6 +20,9 @@
     SYSCALL(yield,  void) \
     SYSCALL(getpid, int) \
     SYSCALL(sleep,  int, unsigned int seconds) \
+    SYSCALL(hart_get_status, long, unsigned long hartid) \
+    SYSCALL(hart_count, int) \
+    SYSCALL(hart_current_id, long) \
 /* ===================== 自动生成部分 ===================== */
 
 // 生成系统调用号

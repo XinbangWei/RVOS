@@ -13,17 +13,16 @@ _start:
 	# Save hart ID from a0 register (not from mhartid CSR)
 	mv	tp, a0			# keep CPU's hartid in its tp for later usage.
 
-	# addi a0, a0, '0'
-	# li a7, 0x1
-	# ecall
+	# Check hart ID: if hart 1, normal boot; others start hart 1 and stop themselves
+	li	t0, 1
+	beq	a0, t0, hart1_normal_boot	# Hart 1 goes to normal boot
 	
-	# TEMPORARY: Skip hart check to avoid restart loop
-	# TODO: Fix the exception handling that causes restart with non-zero hart ID
-	bnez	a0, park		# if we're not on the hart 0
-					# we park the hart
+	# Other harts (0, 2, 3, ...): Start hart 1 and then stop themselves
+	j	other_harts_start_hart1_and_stop
 	
+hart1_normal_boot:
+	# Hart 1: Normal boot logic
 	# Save hart ID and DTB address to our hart info system
-	# Store hartid to global variable
 	la	t0, boot_hartid_asm
 	sd	a0, (t0)
 	
@@ -54,28 +53,42 @@ _start:
 	or	t0, t0, a1
 	csrw	sstatus, t0
 
-	j	start_kernel		# hart 0 jump to c
+	j	start_kernel		# hart 1 jump to c
+
+other_harts_start_hart1_and_stop:
+	# Other harts: Check if hart 1 is already started
+	# If not, start hart 1, then stop themselves
+	
+	# Setup a minimal stack for SBI calls
+	slli	t0, tp, 10		# shift left the hart id by 1024
+	la	sp, stacks + STACK_SIZE	# set the initial stack pointer
+	add	sp, sp, t0		# move to our stack space
+	
+	# Use SBI HSM to start hart 1
+	# sbi_hart_start(hartid=1, start_addr=_start, opaque=dtb_addr)
+	li	a0, 1			# hartid = 1
+	la	a1, _start		# start_addr = _start
+	mv	a2, a1			# opaque = dtb_addr (passed from OpenSBI)
+	li	a6, 0			# fid = SBI_HSM_HART_START
+	li	a7, 0x48534D		# eid = SBI_EXT_HSM
+	ecall				# Make SBI call
+	
+	# Now stop ourselves using SBI HSM
+	li	a0, 0			# No parameters needed
+	li	a1, 0
+	li	a2, 0
+	li	a6, 1			# fid = SBI_HSM_HART_STOP
+	li	a7, 0x48534D		# eid = SBI_EXT_HSM
+	ecall				# Make SBI call - should not return
+	
+	# If we reach here, SBI HSM is not available, fall back to WFI loop
+	j	park
 
 park:
-	li a0, 'P'
-    li a7, 0x1
-    ecall
-
-	# 假设我们想让 Hart 0 从 _start (0x80200000) 重新开始
-	# 并且把 DTB 地址 (假设在 t0) 传递给它
-	# 准备参数
-	li      a0, 0                   # 目标 Hart ID: 0
-	li      a1, 0x80200000          # 启动地址: _start
-	mv      a2, t0                  # 传递给 Hart 0 的参数 (DTB 地址)
-	# 准备 SBI 调用 ID
-	li      a7, 0x48534D            # HSM Extension
-	li      a6, 0                   # HART_START function
-	#
-	# 请求 M-mode 启动 Hart 0
-	ecall
-
-	wfi
-	j	park
+	# General park for other harts that cannot be stopped via SBI HSM
+	# This is a fallback when SBI HSM is not available
+	wfi				# Wait for interrupt (low power state)
+	j	park			# Loop forever
 	# In the standard RISC-V calling convention, the stack pointer sp
 	# is always 16-byte aligned.
 .balign 16
