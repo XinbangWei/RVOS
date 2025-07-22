@@ -184,7 +184,7 @@ int task_create(void (*start_routin)(void *param), void *param, uint8_t priority
 	tasks[_top].ctx.sp = (reg_t)&task_stack[_top][STACK_SIZE - 1];
 	//tasks[_top].ctx.ra = (reg_t)start_routin;
 	tasks[_top].ctx.pc = (reg_t)start_routin;
-	tasks[_top].ctx.a0 = param;
+	tasks[_top].ctx.a0 = (reg_t)param;
 	// 关键修改：设置为用户模式
 	// SPP = 0 (用户模式), SPIE = 1 (允许中断)
 	uint32_t sstatus = r_sstatus();

@@ -81,7 +81,13 @@ int fdt_path_offset(void *fdt, const char *path) {
                 int name_len = strlen(node_name);
                 
                 if (depth > 0) {
-                    if (path_len + name_len + 1 < sizeof(current_path)) {
+                    /* 
+                 * TODO: Refactor path_len and name_len to be size_t.
+                 * The current comparison between signed int and size_t is unsafe.
+                 * The explicit cast below silences the warning for now, but the
+                 * underlying types should be corrected as lengths cannot be negative.
+                 */
+                if ((size_t)path_len + (size_t)name_len + 1 < sizeof(current_path)) {
                         strcat(current_path, node_name);
                         strcat(current_path, "/");
                         path_len += name_len + 1;

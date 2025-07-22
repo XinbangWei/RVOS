@@ -17,4 +17,7 @@
 #include "stddef.h"
 #include "stdarg.h"
 
+// kernel/main.c
+void start_kernel(void);
+
 #endif /* __KERNEL_H__ */

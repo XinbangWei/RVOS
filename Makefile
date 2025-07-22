@@ -17,10 +17,6 @@ GDB     = gdb-multiarch
 # Base CFLAGS used for both kernel and user code
 CFLAGS_BASE = -nostdlib -fno-builtin -march=rv64gc -mabi=lp64d -mcmodel=medany -g
 
-# Warning flags. Can be overridden from the command line.
-# e.g., 'make CFLAGS_WARN="-Wall -Wextra"'
-CFLAGS_WARN ?= -Wall
-
 # Stricter warnings for the 'wall' target
 CFLAGS_WARN_STRICT = -Wall -Wextra -Werror -Wshadow -Wpointer-arith -Wcast-qual -Wmissing-prototypes -Wformat=2 -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function
 
@@ -28,8 +24,8 @@ CFLAGS_WARN_STRICT = -Wall -Wextra -Werror -Wshadow -Wpointer-arith -Wcast-qual 
 INCLUDES = -I include
 
 # Final CFLAGS for kernel and user code
-K_CFLAGS = $(CFLAGS_BASE) $(CFLAGS_WARN) $(INCLUDES) -DUSE_SBI_CONSOLE
-U_CFLAGS = $(CFLAGS_BASE) $(CFLAGS_WARN) $(INCLUDES)
+K_CFLAGS = $(CFLAGS_BASE) $(INCLUDES)
+U_CFLAGS = $(CFLAGS_BASE) $(INCLUDES)
 
 # --- Build Paths ---
 BUILD_DIR  = build

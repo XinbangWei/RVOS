@@ -66,26 +66,20 @@ typedef struct
 #define DEFAULT_TIMESLICE 2
 
 /* scheduler functions */
-extern void sched_init(void);
-extern void schedule(void);
-extern void kernel_scheduler(void);
-extern void back_to_os(void);
-extern void check_timeslice(void);
-extern int task_create(void (*start_routin)(void *param), void *param, uint8_t priority, uint32_t timeslice);
-extern void task_delay(uint32_t count);
-extern void task_yield();
-extern void task_exit(int status);
-extern int get_current_task_id(void);
-extern void sys_switch(struct context *ctx_new);
-extern void print_tasks(void);
-extern void task_go(int i);
+void sched_init(void);
+void schedule(void);
+int task_create(void (*start_routin)(void *param), void *param, uint8_t priority, uint32_t timeslice);
+void task_delay(uint32_t ticks);
+void task_yield(void);
+void task_exit(int status);
+int get_current_task_id(void);
+void print_tasks(void);
 
 /* global variables */
 extern int current_task_id;
 extern task_t tasks[];
 
 /* user tasks */
-extern void just_while(void *param);
 extern void user_task0(void *param);
 extern void user_task1(void *param);
 extern void user_task(void *param);

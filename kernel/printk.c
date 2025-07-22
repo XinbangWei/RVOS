@@ -9,7 +9,7 @@
  * ref: https://github.com/cccriscv/mini-riscv-os/blob/master/05-Preemptive/lib.c
  */
 
-int vsnprintk(char * out, size_t n, const char* s, va_list vl)
+static int vsnprintk(char * out, size_t n, const char* s, va_list vl)
 {
 	int format = 0;
 	int longarg = 0;
@@ -31,6 +31,7 @@ int vsnprintk(char * out, size_t n, const char* s, va_list vl)
 					out[pos] = 'x';
 				}
 				pos++;
+				__attribute__((fallthrough));
 			}
 			case 'x': {
 				long num = longarg ? va_arg(vl, long) : va_arg(vl, int);
