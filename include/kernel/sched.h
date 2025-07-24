@@ -2,6 +2,7 @@
 #define __KERNEL_SCHED_H__
 
 #include "kernel/types.h"
+#include "kernel/list.h"
 
 /* task management */
 struct context
@@ -52,18 +53,22 @@ typedef enum
 	TASK_EXITED
 } task_state;
 
-typedef struct
+struct task_struct
 {
 	struct context ctx;
 	void *param;
-	void (*func)(void *param);
+	void (*start_routine)(void *param);
 	uint8_t priority;
 	task_state state;
 	uint32_t timeslice;
 	uint32_t remaining_timeslice;
-} task_t;
+
+	// Node for the run queue
+	struct list_head run_queue_node;
+};
 
 #define DEFAULT_TIMESLICE 2
+#define MAX_PRIORITY 32
 
 /* scheduler functions */
 void sched_init(void);
@@ -77,7 +82,7 @@ void print_tasks(void);
 
 /* global variables */
 extern int current_task_id;
-extern task_t tasks[];
+extern struct task_struct tasks[];
 
 /* user tasks */
 extern void user_task0(void *param);

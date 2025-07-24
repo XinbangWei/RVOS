@@ -15,7 +15,7 @@ GDB     = gdb-multiarch
 
 # --- Flags ---
 # Base CFLAGS used for both kernel and user code
-CFLAGS_BASE = -nostdlib -fno-builtin -march=rv64gc -mabi=lp64d -mcmodel=medany -g
+CFLAGS_BASE = -nostdlib -fno-builtin -march=rv64gc_zbb -mabi=lp64d -mcmodel=medany -g
 
 # Stricter warnings for the 'wall' target
 CFLAGS_WARN_STRICT = -Wall -Wextra -Werror -Wshadow -Wpointer-arith -Wcast-qual -Wmissing-prototypes -Wformat=2 -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function
@@ -36,7 +36,7 @@ BOOT_SCR   = boot.scr
 
 # --- QEMU ---
 QEMU   = qemu-system-riscv64
-QFLAGS = -nographic -smp 3 -machine virt
+QFLAGS = -nographic -smp 3 -machine virt -cpu rv64,zba=true,zbb=true,zbc=true,zbs=true
 
 # --- Source Files ---
 # Assembly files
