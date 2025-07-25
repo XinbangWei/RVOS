@@ -3,14 +3,18 @@
 #include "syscalls.h"
 #include "kernel/boot_info.h"
 #include "kernel/hart.h"
+#include "kernel/mm.h"
 #include "arch/sbi.h"
+
+#ifdef RUN_TEST
+#include "../test/test.h"
+#endif
 
 /*
  * Following functions SHOULD be called ONLY ONE time here,
  * so just declared here ONCE and NOT included in file os.h.
  */
 // extern void uart_init(void);  // Not needed when using SBI console
-extern void page_init(void);
 extern void sched_init(void);
 extern void schedule(void);
 extern void os_main(void);
@@ -58,9 +62,9 @@ void start_kernel(void)
     hart_print_status_all();
 
     page_init();
-
-    memory_init(); // 初始化内存管理
-
+    
+    malloc_init();
+    
     trap_init();
 
     //verify_syscall_table(); // 初次验证系统调用表
@@ -71,7 +75,11 @@ void start_kernel(void)
 
     sched_init();
 
+#ifdef RUN_TEST
+    test_main();
+#else
     os_main();
+#endif
 
     //disable_pmp(); // 禁用PMP，允许U-Mode访问所有内存
 

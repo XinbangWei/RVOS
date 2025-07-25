@@ -4,6 +4,7 @@
 #   make        - 构建操作系统
 #   make clean  - 清理所有构建文件
 #   make run    - 在QEMU中运行操作系统
+#   make rt     - 在QEMU中运行测试模式
 #   make wall   - 使用严格的警告选项进行构建
 
 # --- Toolchain ---
@@ -24,8 +25,13 @@ CFLAGS_WARN_STRICT = -Wall -Wextra -Werror -Wshadow -Wpointer-arith -Wcast-qual 
 INCLUDES = -I include
 
 # Final CFLAGS for kernel and user code
+ifdef RUN_TEST
+K_CFLAGS = $(CFLAGS_BASE) $(INCLUDES) -DRUN_TEST
+U_CFLAGS = $(CFLAGS_BASE) $(INCLUDES) -DRUN_TEST
+else
 K_CFLAGS = $(CFLAGS_BASE) $(INCLUDES)
 U_CFLAGS = $(CFLAGS_BASE) $(INCLUDES)
+endif
 
 # --- Build Paths ---
 BUILD_DIR  = build
@@ -64,6 +70,11 @@ SRCS_C = \
 	mm/malloc.c \
 	drivers/plic.c
 
+# Test Source Files (only included in test mode)
+TEST_SRCS_C = \
+	test/test_main.c \
+	test/test_page.c
+
 # User Source Files (C)
 USER_SRCS_C = \
 	user/printf.c \
@@ -75,7 +86,13 @@ OBJS_ASM = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRCS_ASM))))
 OBJS_C   = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(SRCS_C))))
 USER_OBJS_C = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(USER_SRCS_C))))
 
+# Test object files (conditionally included)
+ifdef RUN_TEST
+TEST_OBJS_C = $(addprefix $(BUILD_DIR)/, $(addsuffix .o, $(basename $(TEST_SRCS_C))))
+OBJS     = $(OBJS_ASM) $(OBJS_C) $(USER_OBJS_C) $(TEST_OBJS_C)
+else
 OBJS     = $(OBJS_ASM) $(OBJS_C) $(USER_OBJS_C)
+endif
 
 # --- Targets ---
 all: $(TARGET) $(IMAGE_BIN) txt
@@ -103,6 +120,13 @@ $(USER_OBJS_C): $(BUILD_DIR)/user/%.o: user/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(U_CFLAGS) -c $< -o $@
 
+# Rule for Test C files (only when RUN_TEST is defined)
+ifdef RUN_TEST
+$(TEST_OBJS_C): $(BUILD_DIR)/test/%.o: test/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(K_CFLAGS) -c $< -o $@
+endif
+
 # Rule for Assembly files
 $(OBJS_ASM): $(BUILD_DIR)/%.o: %.S
 	@mkdir -p $(dir $@)
@@ -127,6 +151,17 @@ clean:
 # Run in QEMU
 run: all
 	@$(QEMU) -M ? | grep virt >/dev/null || exit
+	@echo "Press Ctrl-A and then X to exit QEMU"
+	@echo "------------------------------------"
+	@$(QEMU) $(QFLAGS) -kernel $(TARGET)
+
+# Run in test mode
+rt:
+	@echo "Building and running in TEST MODE..."
+	@echo "======================================"
+	@$(MAKE) clean
+	@$(MAKE) all RUN_TEST=1
+	@echo "Starting QEMU in test mode..."
 	@echo "Press Ctrl-A and then X to exit QEMU"
 	@echo "------------------------------------"
 	@$(QEMU) $(QFLAGS) -kernel $(TARGET)
@@ -162,4 +197,4 @@ debug: all
 	@$(QEMU) $(QFLAGS) -kernel $(TARGET) -s -S &
 	@$(GDB) $(TARGET) -q -x gdbinit
 
-.PHONY: all clean run wall qemu-gdb-server debug code txt
+.PHONY: all clean run rt wall qemu-gdb-server debug code txt

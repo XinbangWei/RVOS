@@ -23,7 +23,7 @@ static LIST_HEAD(run_queues[MAX_PRIORITY]);
 static uint32_t run_queue_bitmap = 0;
 
 static int tasks_count = 0;
-int current_task_id = -1;
+int current_task_id = -1; // 当前任务ID，-1表示没有任务在运行
 
 /*
  * _top is used to mark the max available position of tasks
