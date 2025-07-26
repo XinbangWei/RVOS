@@ -6,10 +6,20 @@
     ],
     "files.trimTrailingWhitespace": true,
     "files.associations": {
-        "*.S": "asm",
-        "*.s": "asm",
-        "*.ld": "linker-script",
-        "*.dts": "c",
-        "*.dtsi": "c"
+        "*.S": "riscv",
+        "*.ld": "ld",
+        "Makefile*": "makefile",
+        "stdarg.h": "c",
+        "kernel.h": "c",
+        "printk.h": "c",
+        "test.h": "c"
+    },
+    
+    // 搜索和文件浏览器排除
+    "search.exclude": {
+        "**/build": true
+    },
+    "files.exclude": {
+        "**/build": true
     }
 }

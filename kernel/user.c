@@ -19,9 +19,9 @@ void os_main(void)
 {
 	// C任务
 	task_create(test_syscalls_task, NULL, 2, DEFAULT_TIMESLICE);
-	task_create(just_while, NULL, 129, DEFAULT_TIMESLICE);
-	task_create(user_task0, NULL, 128, DEFAULT_TIMESLICE);
-	task_create(user_task1, NULL, 128, DEFAULT_TIMESLICE);
+	task_create(just_while, NULL, 31, DEFAULT_TIMESLICE);
+	task_create(user_task0, NULL, 30, DEFAULT_TIMESLICE);
+	task_create(user_task1, NULL, 30, DEFAULT_TIMESLICE);
 	task_create(user_task, (void *)3, 3, DEFAULT_TIMESLICE);
 	task_create(user_task, (void *)4, 3, DEFAULT_TIMESLICE);
 }

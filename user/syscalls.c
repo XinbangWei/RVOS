@@ -41,3 +41,17 @@ int getpid(void) {
 int sleep(unsigned int seconds) {
     return (int)syscall_raw(__NR_sleep, seconds, 0, 0, 0, 0, 0);
 }
+
+/* ==================== Hart管理系统调用用户空间包装器 ==================== */
+
+long hart_get_status(unsigned long hartid) {
+    return syscall_raw(__NR_hart_get_status, hartid, 0, 0, 0, 0, 0);
+}
+
+int hart_count(void) {
+    return (int)syscall_raw(__NR_hart_count, 0, 0, 0, 0, 0, 0);
+}
+
+long hart_current_id(void) {
+    return syscall_raw(__NR_hart_current_id, 0, 0, 0, 0, 0, 0);
+}

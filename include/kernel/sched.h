@@ -2,6 +2,7 @@
 #define __KERNEL_SCHED_H__
 
 #include "kernel/types.h"
+#include "kernel/list.h"
 
 /* task management */
 struct context
@@ -52,40 +53,38 @@ typedef enum
 	TASK_EXITED
 } task_state;
 
-typedef struct
+struct task_struct
 {
 	struct context ctx;
 	void *param;
-	void (*func)(void *param);
+	void (*start_routine)(void *param);
 	uint8_t priority;
 	task_state state;
 	uint32_t timeslice;
 	uint32_t remaining_timeslice;
-} task_t;
+
+	// Node for the run queue
+	struct list_head run_queue_node;
+};
 
 #define DEFAULT_TIMESLICE 2
+#define MAX_PRIORITY 32
 
 /* scheduler functions */
-extern void sched_init(void);
-extern void schedule(void);
-extern void kernel_scheduler(void);
-extern void back_to_os(void);
-extern void check_timeslice(void);
-extern int task_create(void (*start_routin)(void *param), void *param, uint8_t priority, uint32_t timeslice);
-extern void task_delay(uint32_t count);
-extern void task_yield();
-extern void task_exit(int status);
-extern int get_current_task_id(void);
-extern void sys_switch(struct context *ctx_new);
-extern void print_tasks(void);
-extern void task_go(int i);
+void sched_init(void);
+void schedule(void);
+int task_create(void (*start_routin)(void *param), void *param, uint8_t priority, uint32_t timeslice);
+void task_delay(uint32_t ticks);
+void task_yield(void);
+void task_exit(int status);
+int get_current_task_id(void);
+void print_tasks(void);
 
 /* global variables */
 extern int current_task_id;
-extern task_t tasks[];
+extern struct task_struct tasks[];
 
 /* user tasks */
-extern void just_while(void *param);
 extern void user_task0(void *param);
 extern void user_task1(void *param);
 extern void user_task(void *param);

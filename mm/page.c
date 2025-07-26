@@ -1,7 +1,8 @@
 #include "kernel.h"
+#include "kernel/mm.h"
 
 /*
- * Following global vars are defined in mem.S
+ * 以下全局变量由链接器脚本(os.ld)定义，用于标识内存的关键边界
  */
 extern uint32_t TEXT_START;
 extern uint32_t TEXT_END;
@@ -11,39 +12,25 @@ extern uint32_t RODATA_START;
 extern uint32_t RODATA_END;
 extern uint32_t BSS_START;
 extern uint32_t BSS_END;
-extern uint32_t HEAP_START;
-extern uint32_t HEAP_SIZE;
+extern uint32_t _memory_start; // RAM的起始地址
+extern uint32_t _memory_end;   // RAM的结束地址
 
 /*
- * _alloc_start points to the actual start address of heap pool
- * _alloc_end points to the actual end address of heap pool
- * _num_pages holds the actual max number of pages we can allocate.
+ * _alloc_start 指向可供分配内存的起始地址
+ * _alloc_end 指向可供分配内存的结束地址
+ * _num_pages 保存我们能管理的总物理页数
  */
 static uint32_t _alloc_start = 0;
 static uint32_t _alloc_end = 0;
 static uint32_t _num_pages = 0;
 
-#define PAGE_SIZE 4096
-#define PAGE_ORDER 12
-
-#define PAGE_TAKEN (uint8_t)(1 << 0)
-#define PAGE_LAST  (uint8_t)(1 << 1)
-
-/*
- * Page Descriptor 
- * flags:
- * - bit 0: flag if this page is taken(allocated)
- * - bit 1: flag if this page is the last page of the memory block allocated
- */
-struct Page {
-	uint8_t flags;
-};
-
+// 清除页描述符的标志
 static inline void _clear(struct Page *page)
 {
 	page->flags = 0;
 }
 
+// 检查页是否空闲
 static inline int _is_free(struct Page *page)
 {
 	if (page->flags & PAGE_TAKEN) {
@@ -53,11 +40,13 @@ static inline int _is_free(struct Page *page)
 	}
 }
 
+// 设置页描述符的标志
 static inline void _set_flag(struct Page *page, uint8_t flags)
 {
 	page->flags |= flags;
 }
 
+// 检查页是否是内存块的最后一页
 static inline int _is_last(struct Page *page)
 {
 	if (page->flags & PAGE_LAST) {
@@ -68,9 +57,10 @@ static inline int _is_last(struct Page *page)
 }
 
 /*
- * align the address to the border of page(4K)
+ * 将地址向上对齐到页边界(4K)
+ * Made public for testing
  */
-static inline uint32_t _align_page(uint32_t address)
+inline uint32_t _align_page(uint32_t address)
 {
 	uint32_t order = (1 << PAGE_ORDER) - 1;
 	return (address + order) & (~order);
@@ -78,112 +68,174 @@ static inline uint32_t _align_page(uint32_t address)
 
 void page_init()
 {
-	/* 
-	 * We reserved 8 Page (8 x 4096) to hold the Page structures.
-	 * It should be enough to manage at most 128 MB (8 x 4096 x 4096) 
-	 */
-	_num_pages = (HEAP_SIZE / PAGE_SIZE) - 8;
-	printk("HEAP_START = %x, HEAP_SIZE = %x, num of pages = %d\n", HEAP_START, HEAP_SIZE, _num_pages);
-	
-	struct Page *page = (struct Page *)HEAP_START;
-	for (int i = 0; i < _num_pages; i++) {
-		_clear(page);
-		page++;	
+	// 从链接器符号获取总内存大小，并计算总页数
+	_num_pages = ((uint32_t)&_memory_end - (uint32_t)&_memory_start) / PAGE_SIZE;
+	printk("PHYSICAL MEMORY: 0x%x -> 0x%x (%d MB), Total pages: %d\n", 
+		   (uint32_t)&_memory_start, (uint32_t)&_memory_end, 
+		   ((uint32_t)&_memory_end - (uint32_t)&_memory_start) / 1024 / 1024,
+		   _num_pages);
+
+	// 页描述符数组紧跟在BSS段之后
+	struct Page *page_descriptors = (struct Page *)_align_page((uint32_t)&BSS_END);
+
+	// 真正可分配的内存（堆），起始于页描述符数组之后
+	_alloc_start = _align_page((uint32_t)page_descriptors + _num_pages * sizeof(struct Page));
+	_alloc_end = (uint32_t)&_memory_end;
+
+	// BSS段中的页描述符数组默认就是0，所以所有页状态初始为 FREE (flags=0)
+	// 我们只需要将内核和页描述符自身占用的部分标记为 TAKEN
+
+	// 计算被内核镜像和页描述符数组自身占用的总页数
+	int reserved_pages = (_alloc_start - (uint32_t)&_memory_start) / PAGE_SIZE;
+
+	// 将这些被预留的页标记为 TAKEN
+	for (int i = 0; i < reserved_pages; i++) {
+		_set_flag(&page_descriptors[i], PAGE_TAKEN);
 	}
 
-	_alloc_start = _align_page(HEAP_START + 8 * PAGE_SIZE);
-	_alloc_end = _alloc_start + (PAGE_SIZE * _num_pages);
-
-	printk("TEXT:   0x%x -> 0x%x\n", TEXT_START, TEXT_END);
-	printk("RODATA: 0x%x -> 0x%x\n", RODATA_START, RODATA_END);
-	printk("DATA:   0x%x -> 0x%x\n", DATA_START, DATA_END);
-	printk("BSS:    0x%x -> 0x%x\n", BSS_START, BSS_END);
-	printk("HEAP:   0x%x -> 0x%x\n", _alloc_start, _alloc_end);
+	// --- 打印调试信息 ---
+	printk("TEXT:   0x%x -> 0x%x\n", (uint32_t)&TEXT_START, (uint32_t)&TEXT_END);
+	printk("RODATA: 0x%x -> 0x%x\n", (uint32_t)&RODATA_START, (uint32_t)&RODATA_END);
+	printk("DATA:   0x%x -> 0x%x\n", (uint32_t)&DATA_START, (uint32_t)&DATA_END);
+	printk("BSS:    0x%x -> 0x%x\n", (uint32_t)&BSS_START, (uint32_t)&BSS_END);
+	printk("Page Descriptors Array: 0x%x -> 0x%x\n", (uint32_t)page_descriptors, _alloc_start);
+	printk("Kernel, BSS and Page Descriptors reserved space: %d pages (%d KB)\n", reserved_pages, reserved_pages * 4);
+	printk("ALLOCATABLE MEMORY (HEAP): 0x%x -> 0x%x\n", _alloc_start, _alloc_end);
 }
 
 /*
- * Allocate a memory block which is composed of contiguous physical pages
- * - npages: the number of PAGE_SIZE pages to allocate
+ * 分配一个由连续物理页组成的内存块
+ * - npages: 需要分配的页数
  */
 void *page_alloc(int npages)
 {
-	/* Note we are searching the page descriptor bitmaps. */
+	if (npages <= 0 || npages > _num_pages) {
+		printk("WARNING: page_alloc called with invalid npages=%d (max=%d)\n", npages, _num_pages);
+		return NULL; // 防止无效的页数请求
+	}
+
 	int found = 0;
-	struct Page *page_i = (struct Page *)HEAP_START;
+	// 页描述符数组位于内核BSS段之后
+	struct Page *page_descriptors = (struct Page *)_align_page((uint32_t)&BSS_END);
+
+	// 遍历整个物理页表来查找连续的空闲页
+	// 添加更严格的边界检查
+	if (_num_pages < npages) {
+		return NULL;
+	}
+	
 	for (int i = 0; i <= (_num_pages - npages); i++) {
-		if (_is_free(page_i)) {
+		// 添加数组边界检查
+		if (i >= _num_pages) {
+			break;
+		}
+		
+		if (_is_free(&page_descriptors[i])) {
 			found = 1;
-			/* 
-			 * meet a free page, continue to check if following
-			 * (npages - 1) pages are also unallocated.
-			 */
-			struct Page *page_j = page_i + 1;
-			for (int j = i + 1; j < (i + npages); j++) {
-				if (!_is_free(page_j)) {
+			// 检查后续 (npages - 1) 个页是否也空闲
+			for (int j = 1; j < npages; j++) {
+				// 严格的边界检查
+				if ((i + j) >= _num_pages || !_is_free(&page_descriptors[i + j])) {
 					found = 0;
+					i += j; // 优化：跳过已检查过的页
 					break;
 				}
-				page_j++;
 			}
-			/*
-			 * get a memory block which is good enough for us,
-			 * take housekeeping, then return the actual start
-			 * address of the first page of this memory block
-			 */
+			
 			if (found) {
-				struct Page *page_k = page_i;
-				for (int k = i; k < (i + npages); k++) {
-					_set_flag(page_k, PAGE_TAKEN);
-					page_k++;
+				// 最后一次边界检查
+				if ((i + npages - 1) >= _num_pages) {
+					return NULL;
 				}
-				page_k--;
-				_set_flag(page_k, PAGE_LAST);
-				return (void *)(_alloc_start + i * PAGE_SIZE);
+				
+				// 找到连续空闲页，将其标记为 TAKEN
+				for (int k = 0; k < npages; k++) {
+					_set_flag(&page_descriptors[i + k], PAGE_TAKEN);
+				}
+				// 标记内存块的最后一页
+				_set_flag(&page_descriptors[i + npages - 1], PAGE_LAST);
+				
+				// 返回分配的内存块的实际物理地址
+				return (void *)((uint32_t)&_memory_start + i * PAGE_SIZE);
 			}
 		}
-		page_i++;
 	}
-	return NULL;
+	return NULL; // 内存不足
 }
 
 /*
- * Free the memory block
- * - p: start address of the memory block
+ * 释放内存块
+ * - p: 内存块的起始地址
  */
 void page_free(void *p)
 {
-	/*
-	 * Assert (TBD) if p is invalid
-	 */
-	if (!p || (uint32_t)p >= _alloc_end) {
+	// 基本的合法性检查
+	if (!p) {
+		printk("WARNING: page_free called with NULL pointer\n");
 		return;
 	}
-	/* get the first page descriptor of this memory block */
-	struct Page *page = (struct Page *)HEAP_START;
-	page += ((uint32_t)p - _alloc_start)/ PAGE_SIZE;
-	/* loop and clear all the page descriptors of the memory block */
-	while (!_is_free(page)) {
+	
+	if ((uint32_t)p < _alloc_start || (uint32_t)p >= _alloc_end) {
+		printk("WARNING: page_free called with invalid address 0x%x (valid range: 0x%x-0x%x)\n", 
+			   (uint32_t)p, _alloc_start, _alloc_end);
+		return;
+	}
+
+	// 页描述符数组位于内核BSS段之后
+	struct Page *page_descriptors = (struct Page *)_align_page((uint32_t)&BSS_END);
+	
+	// 根据物理地址计算它在页描述符数组中的索引
+	int page_index = ((uint32_t)p - (uint32_t)&_memory_start) / PAGE_SIZE;
+	
+	// 添加边界检查
+	if (page_index < 0 || page_index >= _num_pages) {
+		printk("ERROR: page_free: page_index %d out of bounds (0-%d)\n", page_index, _num_pages-1);
+		return;
+	}
+	
+	struct Page *page = &page_descriptors[page_index];
+	struct Page *end_of_descriptors = &page_descriptors[_num_pages];
+
+	// 检查页面是否已分配
+	if (_is_free(page)) {
+		printk("WARNING: page_free: trying to free already free page %d\n", page_index);
+		return;
+	}
+
+	// 循环释放属于同一个内存块的所有页，并增加边界检查
+	int release_count = 0;
+	while (!_is_free(page) && page < end_of_descriptors) {
+		release_count++;
+		if (release_count > _num_pages) {
+			printk("ERROR: page_free: infinite loop detected, breaking\n");
+			break;
+		}
+		
 		if (_is_last(page)) {
 			_clear(page);
 			break;
 		} else {
 			_clear(page);
-			page++;;
+			page++;
 		}
 	}
 }
 
-void page_test()
-{
-	void *p = page_alloc(2);
-	printk("p = 0x%x\n", p);
-	//page_free(p);
+/* --- Public utility functions for testing --- */
 
-	void *p2 = page_alloc(7);
-	printk("p2 = 0x%x\n", p2);
-	page_free(p2);
+// Get total pages in the system
+int get_total_pages(void) {
+    return _num_pages;
+}
 
-	void *p3 = page_alloc(4);
-	printk("p3 = 0x%x\n", p3);
+// Get allocatable pages (total minus reserved)
+int get_allocatable_pages(void) {
+    int reserved_pages = (_alloc_start - (uint32_t)&_memory_start) / PAGE_SIZE;
+    return _num_pages - reserved_pages;
+}
+
+// Get page descriptors array pointer
+struct Page* get_page_descriptors(void) {
+    return (struct Page *)_align_page((uint32_t)&BSS_END);
 }
 

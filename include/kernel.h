@@ -11,11 +11,13 @@
 #include "kernel/timer.h"
 #include "kernel/spinlock.h"
 #include "kernel/irq.h"
-#include "kernel/uart.h"
 #include "syscalls.h"
 #include "kernel/boot_info.h"
 
 #include "stddef.h"
 #include "stdarg.h"
+
+// kernel/main.c
+void start_kernel(void);
 
 #endif /* __KERNEL_H__ */

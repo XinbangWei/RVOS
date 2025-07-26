@@ -13,17 +13,16 @@ _start:
 	# Save hart ID from a0 register (not from mhartid CSR)
 	mv	tp, a0			# keep CPU's hartid in its tp for later usage.
 
-	# addi a0, a0, '0'
-	# li a7, 0x1
-	# ecall
+	# Check hart ID: if hart 1, normal boot; others start hart 1 and stop themselves
+	li	t0, 1
+	beq	a0, t0, hart1_normal_boot	# Hart 1 goes to normal boot
 	
-	# TEMPORARY: Skip hart check to avoid restart loop
-	# TODO: Fix the exception handling that causes restart with non-zero hart ID
-	bnez	a0, park		# if we're not on the hart 0
-					# we park the hart
+	# Other harts (0, 2, 3, ...): Start hart 1 and then stop themselves
+	j	other_harts_start_hart1_and_stop
 	
+hart1_normal_boot:
+	# Hart 1: Normal boot logic
 	# Save hart ID and DTB address to our hart info system
-	# Store hartid to global variable
 	la	t0, boot_hartid_asm
 	sd	a0, (t0)
 	
@@ -54,28 +53,100 @@ _start:
 	or	t0, t0, a1
 	csrw	sstatus, t0
 
-	j	start_kernel		# hart 0 jump to c
+	j	start_kernel		# hart 1 jump to c
+
+other_harts_start_hart1_and_stop:
+	# Other harts: Check if hart 1 is already started
+	# If not, start hart 1, then stop themselves
+	
+	# Setup a minimal stack for SBI calls
+	slli	t0, tp, 10		# shift left the hart id by 1024
+	la	sp, stacks + STACK_SIZE	# set the initial stack pointer
+	add	sp, sp, t0		# move to our stack space
+	
+	# Use SBI HSM to start hart 1
+	# sbi_hart_start(hartid=1, start_addr=_start, opaque=dtb_addr)
+	li	a0, 1			# hartid = 1
+	la	a1, _start		# start_addr = _start
+	mv	a2, a1			# opaque = dtb_addr (passed from OpenSBI)
+	li	a6, 0			# fid = SBI_HSM_HART_START
+	li	a7, 0x48534D		# eid = SBI_EXT_HSM
+	ecall				# Make SBI call
+	
+	# Now stop ourselves using SBI HSM
+	li	a0, 0			# No parameters needed
+	li	a1, 0
+	li	a2, 0
+	li	a6, 1			# fid = SBI_HSM_HART_STOP
+	li	a7, 0x48534D		# eid = SBI_EXT_HSM
+	ecall				# Make SBI call - should not return
+	
+	# If we reach here, SBI HSM is not available, fall back to WFI loop
+	j	park
 
 park:
-	li a0, 'P'
-    li a7, 0x1
-    ecall
+	# General park for other harts that cannot be stopped via SBI HSM
+	# This is a fallback when SBI HSM is not available
+	wfi				# Wait for interrupt (low power state)
+	j	park			# Loop forever
 
-	# 假设我们想让 Hart 0 从 _start (0x80200000) 重新开始
-	# 并且把 DTB 地址 (假设在 t0) 传递给它
-	# 准备参数
-	li      a0, 0                   # 目标 Hart ID: 0
-	li      a1, 0x80200000          # 启动地址: _start
-	mv      a2, t0                  # 传递给 Hart 0 的参数 (DTB 地址)
-	# 准备 SBI 调用 ID
-	li      a7, 0x48534D            # HSM Extension
-	li      a6, 0                   # HART_START function
-	#
-	# 请求 M-mode 启动 Hart 0
-	ecall
+# =================================================================
+# Entry point for secondary harts started by our kernel
+# This function will set up the environment and drop to User Mode
+# =================================================================
+.globl _secondary_start
+_secondary_start:
+    # Per the RISC-V SBI specification, when a hart is started via
+    # sbi_hart_start, it begins execution at the specified start_addr
+    # with the following register states:
+    # a0: hartid of this hart
+    # a1: the opaque value passed to sbi_hart_start
+    # All other registers are undefined.
 
-	wfi
-	j	park
+    # We use the opaque value (a1) to pass the user function's address.
+
+    # --- Basic S-mode setup ---
+
+    # 1. Set up tp register to point to this hart's per_cpu_data.
+    la   tp, cpu_data_area
+    li   t0, 16  # sizeof(struct per_cpu_data)
+    mul  t1, a0, t0
+    add  tp, tp, t1  # tp = &cpu_data_area[hartid]
+
+    # 2. Set up stack pointer. This will become the user stack.
+    la   sp, stacks
+    li   t0, STACK_SIZE
+    add  t1, a0, 1
+    mul  t2, t0, t1
+    add  sp, sp, t2  # sp now points to the top of this hart's stack region
+
+    # 2.5. Initialize trap vector for this hart.
+    #      This is CRITICAL. Without it, any trap (like ecall) will jump to address 0.
+    call trap_init
+
+    # --- Prepare for U-mode entry ---
+
+    # 3. Set sepc to the user function's address, which is in a1.
+    csrw sepc, a1
+
+    # 4. Prepare sstatus for sret.
+    #    - Clear SPP to 0 for U-mode.
+    #    - Set SPIE to 1 to enable interrupts after sret.
+    li   t0, 1 << 8      # Load mask for SPP bit (256) into a register
+    csrc sstatus, t0    # Atomically clear SPP bit using the register
+    li   t0, 1 << 5      # Load mask for SPIE bit (32) into a register
+    csrs sstatus, t0    # Atomically set SPIE bit
+
+    # 5. Set up arguments for the user function (hartid in a0).
+    #    (No code needed, a0 is already correct)
+
+    # 6. Switch to User Mode.
+    sret
+
+.L_secondary_hang:
+    wfi
+    j .L_secondary_hang
+
 	# In the standard RISC-V calling convention, the stack pointer sp
 	# is always 16-byte aligned.
 .balign 16

@@ -1,160 +1,186 @@
+// 一个基于K&R C书中设计的简单内存分配器。
+// 它从底层的页分配器获取内存。
+
 #include "kernel.h"
+#include "kernel/mm.h"
 
-#define MEMORY_POOL_SIZE 1024 * 1024
-// 假设有1MB的内存池
+// 内存块头部结构。每个内存块（无论是已分配还是空闲）都由此头部开始。
+// 使用union来确保头部按最严格的对齐要求（long）对齐。
+typedef union header {
+    struct {
+        union header *next; // 指向空闲链表中的下一个块
+        size_t size;        // 当前块的大小，单位是sizeof(Header)
+    } s;
+    long align; // 强制对齐
+} Header;
 
-#define ALIGNMENT 16
-// 定义内存对齐为16字节
+static Header base;          // 用于构建空闲链表的起始空块
+static Header *freep = NULL; // 空闲链表的起始指针
 
-#define ALIGN(size) (((size) + (ALIGNMENT - 1)) & ~(ALIGNMENT - 1))
-// ALIGN宏确保给定的大小按照ALIGNMENT对齐
+// free函数的前向声明
+void free(void *ptr);
 
-#define block_get_size(block_ptr) ((mem_block *)(block_ptr))->size
-#define block_get_next(block_ptr) ((mem_block *)(block_ptr))->next
-#define block_is_used(block_ptr) !((mem_block *)(block_ptr))->free
-
-/*
- * Following functions SHOULD be called ONLY ONE time here,
- * so just declared here ONCE and NOT included in file os.h.
- */
-
-typedef struct mem_block
+// `morecore`: 向页分配器申请更多内存。
+// 当`malloc`耗尽内存时会调用此函数。
+static Header *morecore(size_t nunits)
 {
-    size_t size;            // 块的大小
-    struct mem_block *next; // 指向下一个块的指针
-    int free;               // 是否空闲
-} mem_block;
+    char *cp;
+    Header *up;
+    int npages;
 
-static char memory_pool[MEMORY_POOL_SIZE];
-static mem_block *free_list = (void *)memory_pool;
+    // 我们以页为单位向页分配内存。
+    // 计算需要多少页来满足`nunits`的需求。
+    // 至少申请一整个页。
+    npages = (nunits * sizeof(Header) + PAGE_SIZE - 1) / PAGE_SIZE;
 
-void memory_init(void)
-{
-    free_list->size = MEMORY_POOL_SIZE - sizeof(mem_block);
-    free_list->next = NULL;
-    free_list->free = 1;
+    cp = page_alloc(npages);
+    if (cp == NULL) {
+        // 页分配器内存不足。
+        return NULL;
+    }
+
+    up = (Header *)cp;
+    // 新块的大小是页数转换成Header为单位的数量。
+    up->s.size = (npages * PAGE_SIZE) / sizeof(Header);
+
+    // 将新申请的内存加入到空闲链表中。
+    // `free`函数会处理与相邻空闲块的合并。
+    // 我们传递`up + 1`是因为`free`期望接收一个指向用户数据区的指针，
+    // 该区域紧跟在头部之后。
+    free((void *)(up + 1));
+
+    // `free`会更新`freep`，我们将其返回给调用者。
+    return freep;
 }
 
-void *malloc(size_t size)
+// `malloc_init`: 初始化内存分配器。
+// 必须在内核启动时调用一次。
+void malloc_init()
 {
-    size_t best_fit_size = MEMORY_POOL_SIZE;
-    mem_block *best_fit_block = NULL;
-    mem_block *current = free_list;
+    base.s.next = &base; // 循环链表，初始指向自身
+    base.s.size = 0;     // 大小为0
+    freep = &base;       // 空闲链表初始为空
+}
 
-    size = ALIGN(size + sizeof(mem_block)); // 包括管理结构的大小
+// `malloc`: 分配一个至少为`nbytes`大小的内存块。
+void *malloc(size_t nbytes)
+{
+    Header *p, *prevp;
+    size_t nunits;
 
-    //printk("请求分配 %d 字节的内存\n", size);
+    if (nbytes == 0) {
+        return NULL;
+    }
 
-    while (current)
-    {
-        //printk("检查块：地址=%p，大小=%d\n", (void *)current, current->size);
-        if (current->free && current->size >= size)
-        {
-            size_t current_block_free_space = current->size - size;
-            if (current_block_free_space < best_fit_size)
-            {
-                best_fit_size = current_block_free_space;
-                best_fit_block = current;
+    // 计算需要多少个Header大小的单元。
+    // 我们为头部本身加1，并向上取整，以确保用户数据区足够大。
+    nunits = (nbytes + sizeof(Header) - 1) / sizeof(Header) + 1;
+
+    prevp = freep;
+    // 遍历循环空闲链表，查找一个足够大的块。
+    for (p = prevp->s.next; ; prevp = p, p = p->s.next) {
+        if (p->s.size >= nunits) { // 找到了一个足够大的块
+            if (p->s.size == nunits) {
+                // 大小正好合适，直接从链表中移除。
+                prevp->s.next = p->s.next;
+            } else {
+                // 块比需求大，从尾部分配。
+                // 这样可以避免修改空闲链表中的指针。
+                p->s.size -= nunits;
+                p += p->s.size;
+                p->s.size = nunits;
+            }
+            // 将下一次malloc的搜索起点设置为我们找到的块的前一个块。
+            // 这有助于在堆中分散分配。
+            freep = prevp;
+            // 返回指向用户数据区的指针，就在头部之后。
+            return (void *)(p + 1);
+        }
+
+        // 如果遍历完整个空闲链表都没有找到合适的块。
+        if (p == freep) {
+            // 向系统申请更多内存。
+            if ((p = morecore(nunits)) == NULL) {
+                // 内存耗尽。
+                return NULL;
             }
         }
-        current = current->next;
-        //printk("移动到下一个块：地址=%p\n", (void *)current);
     }
-
-    if (!best_fit_block)
-    {
-        printk("错误：没有足够的空间分配 %d 字节的内存\n", size);
-        return NULL; // 没有足够的空间
-    }
-
-    if (best_fit_size <= sizeof(mem_block))
-    {
-        // 如果剩余空间不足以创建一个新的mem_block，则不分割，直接分配整个块
-        best_fit_block->free = 0;
-        best_fit_block->next = NULL;
-    }
-    else
-    {
-        // 分割内存块
-        mem_block *new_block = (mem_block *)((char *)best_fit_block + size);
-        new_block->size = best_fit_block->size - size;
-        new_block->next = best_fit_block->next;
-        new_block->free = 1;
-
-        best_fit_block->size = size - sizeof(mem_block); // 更新当前块的大小，减去管理结构的大小
-        best_fit_block->free = 0;
-        best_fit_block->next = new_block;
-    }
-
-    // 初始化分配的内存块（不包括管理结构）
-    void *allocated_memory = (void *)(best_fit_block + 1);
-    memset(allocated_memory, 0, best_fit_block->size - sizeof(mem_block));
-
-    //printk("分配了 %d 字节的内存\n", size);
-    //printk("分配后块：地址=%p，大小=%d\n", (void *)best_fit_block, best_fit_block->size);
-    //printk("新块：地址=%p，大小=%d\n\n", (void *)best_fit_block->next, best_fit_block->next ? best_fit_block->next->size : 0);
-    return allocated_memory;
 }
 
+// `free`: 释放一个内存块，将其归还到空闲链表。
 void free(void *ptr)
 {
-    if (!ptr)
-    {
-        printk("警告：尝试释放NULL指针\n");
+    Header *bp, *p;
+
+    if (ptr == NULL) {
         return;
     }
-    mem_block *block_to_free = (mem_block *)((char *)ptr - sizeof(mem_block));
-    block_to_free->free = 1;
 
-    //printk("释放块：地址=%p，大小=%d\n\n", (void *)block_to_free, block_to_free->size);
+    // 获取指向块头部的指针。
+    bp = (Header *)ptr - 1;
 
-    // 合并空闲块
-    mem_block *current = free_list;
-    mem_block *prev = NULL;
-    while (current)
-    {
-        if (current == block_to_free)
-        {
-            // 如果前一个块是空闲的，则合并
-            if (prev && prev->free)
-            {
-                prev->size += current->size + sizeof(mem_block);
-                prev->next = current->next;
-                current = prev; // 更新当前指针以指向合并后的块
-            }
-            // 检查并合并下一个空闲块
-            if (current->next && current->next->free)
-            {
-                current->size += current->next->size + sizeof(mem_block);
-                current->next = current->next->next;
-            }
+    // 在空闲链表中找到合适的位置插入被释放的块。
+    // 链表按地址排序，以便进行合并。
+    for (p = freep; !(bp > p && bp < p->s.next); p = p->s.next) {
+        // `p >= p->s.next`表示我们到达了循环链表的“末端”
+        // (即p指向地址最高的块)。
+        if (p >= p->s.next && (bp > p || bp < p->s.next)) {
             break;
         }
-        prev = current;
-        current = current->next;
     }
+
+    // 尝试与下一个块（内存地址更高的块）合并。
+    if (bp + bp->s.size == p->s.next) {
+        bp->s.size += p->s.next->s.size;
+        bp->s.next = p->s.next->s.next;
+    } else {
+        bp->s.next = p->s.next;
+    }
+
+    // 尝试与前一个块（内存地址更低的块）合并。
+    if (p + p->s.size == bp) {
+        p->s.size += bp->s.size;
+        p->s.next = bp->s.next;
+    } else {
+        p->s.next = bp;
+    }
+
+    // 将空闲链表的指针重置到我们当前的位置。
+    freep = p;
 }
 
-void print_blocks(void)
+// --- 调试函数 ---
+
+// 打印当前所有空闲块的信息
+void print_free_list()
 {
-    void *block_ptr = memory_pool;
-    printk("-- start to print blocks --\n");
-    do
-    {
-        printk("\tblock: %p, size: %d, used: %d\n", block_ptr,
-               block_get_size(block_ptr), block_is_used(block_ptr));
-        block_ptr = block_get_next(block_ptr);
-    } while (block_ptr);
-    printk("-- end to print blocks --\n");
+    Header *p;
+    printk("-- start to print free list --\n");
+    // 从空闲链表的起点开始遍历，直到绕回起点
+    for (p = freep->s.next; p != &base; p = p->s.next) {
+        printk("\tfree block: %p, size: %d units (%d bytes)\n",
+               (void *)p, p->s.size, p->s.size * sizeof(Header));
+    }
+    printk("-- end to print free list --\n");
 }
 
-void print_block(void *block_ptr)
+// 打印指定内存块的内容（以整数形式）
+void print_block(void *ptr)
 {
-    mem_block *block_info = (mem_block *)(block_ptr - sizeof(mem_block));
-    void *block_end = block_ptr + block_info->size;
+    if (ptr == NULL) {
+        printk("print_block: trying to print a NULL pointer.\n");
+        return;
+    }
+    Header *bp = (Header *)ptr - 1;
+    // 计算用户数据区的实际字节大小
+    size_t user_size_bytes = (bp->s.size - 1) * sizeof(Header);
+    void *block_end = (char *)ptr + user_size_bytes;
     int byte_count = 1;
-    int *int_block_ptr = (int *)block_ptr;
-    for (; int_block_ptr < block_end; int_block_ptr++, byte_count++)
+    int *int_block_ptr = (int *)ptr;
+
+    printk("--- start content of block at %p (size: %d bytes) ---\n", ptr, user_size_bytes);
+    for (; (void *)int_block_ptr < block_end; int_block_ptr++, byte_count++)
     {
         printk("%d", (*int_block_ptr));
         if (byte_count % 4 == 0)
@@ -162,5 +188,5 @@ void print_block(void *block_ptr)
         if (byte_count % 32 == 0)
             printk("\n");
     }
-    printk("\n\n");
+    printk("\n--- end content of block ---\n\n");
 }

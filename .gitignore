@@ -88,3 +88,8 @@ Thumbs.db
 Image
 .gemini/
 tags
+
+# Added by Gemini to ignore build artifacts
+wall_warnings.log
+boot.cmd
+boot.scr

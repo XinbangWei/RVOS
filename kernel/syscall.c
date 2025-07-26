@@ -74,6 +74,28 @@ int do_sleep(unsigned int seconds)
     return 0;  // 成功返回0
 }
 
+/* ==================== Hart管理系统调用 ==================== */
+
+
+
+/**
+ * @brief 获取系统中Hart的数量
+ * @return Hart数量
+ */
+int do_hart_count(void)
+{
+    return MAXNUM_CPU;
+}
+
+/**
+ * @brief 获取当前Hart的ID
+ * @return 当前Hart的ID
+ */
+long do_hart_current_id(void)
+{
+    return sbi_get_hartid();
+}
+
 /* ==================== 系统调用分发 ==================== */
 
 // 生成系统调用表
