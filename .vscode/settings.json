@@ -1,19 +1,10 @@
 {
-    // RVOS项目的VSCode工作区设置 (C only)
-    
-    // C/C++配置
-    "C_Cpp.default.cStandard": "c11",
-    "C_Cpp.default.compilerPath": "/usr/bin/riscv64-unknown-elf-gcc",
-    "C_Cpp.default.includePath": [
-        "${workspaceFolder}/include",
-        "${workspaceFolder}/arch/riscv"
+    "editor.formatOnSave": true,
+    "editor.rulers": [
+        80,
+        100
     ],
-    "C_Cpp.default.defines": [
-        "__riscv",
-        "__riscv_xlen=64"
-    ],
-    
-    // 文件关联
+    "files.trimTrailingWhitespace": true,
     "files.associations": {
         "*.S": "riscv",
         "*.ld": "ld",

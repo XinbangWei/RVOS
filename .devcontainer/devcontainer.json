@@ -1,35 +1,30 @@
 {
-  "name": "RVOS Development Environment (C only)",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "name": "RVOS Development Environment",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
   "customizations": {
     "vscode": {
       "extensions": [
-        "ms-vscode.cpptools",
+        "ms-vscode.cpptools-extension-pack", 
         "ms-ceintl.vscode-language-pack-zh-hans",
         "github.copilot",
         "github.copilot-chat",
-        "github.vscode-github-actions",
-        "mhutchie.git-graph",
-        "ms-vscode.cpptools",
-        "ms-vscode.cpptools-extension-pack",
-        "webfreak.debug",
-        "zhwu95.riscv"
+        "github.vscode-github-actions", 
+        "mhutchie.git-graph", 
+        "webfreak.debug", 
+        "zhwu95.riscv" 
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash",
-        "C_Cpp.default.cStandard": "c11",
-        "C_Cpp.default.cppStandard": "c++17",
-        "C_Cpp.default.compilerPath": "/usr/bin/riscv64-unknown-elf-gcc",
         "editor.formatOnSave": true,
-        "editor.rulers": [
-          80,
-          100
-        ],
         "files.trimTrailingWhitespace": true,
         "files.associations": {
           "*.S": "asm",
-          "*.ld": "ld"
+          "*.s": "asm",
+          "*.ld": "linker-script",
+          "*.dts": "c",
+          "*.dtsi": "c"
         }
       }
     }

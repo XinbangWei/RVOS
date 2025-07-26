@@ -1,16 +1,32 @@
 {
-    "version": "0.2.0",
-    "configurations": [
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "QEMU Debug",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/os.elf",
+      "cwd": "${workspaceFolder}",
+      "miDebuggerPath": "gdb-multiarch",
+      "miDebuggerServerAddress": "localhost:1234",
+      "preLaunchTask": "Debug: Start QEMU",
+      "postDebugTask": "stop-qemu"
+    },
+    {
+      "name": "JTAG Debug",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/os.elf",
+      "cwd": "${workspaceFolder}",
+      "miDebuggerPath": "gdb-multiarch",
+      "miDebuggerServerAddress": "localhost:3333",
+      "preLaunchTask": "Start OpenOCD",
+      "postDebugTask": "Stop OpenOCD",
+      "setupCommands": [
         {
-            "name": "QEMU Debug",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/build/os.elf",
-            "cwd": "${workspaceFolder}",
-            "miDebuggerPath": "gdb-multiarch",
-            "miDebuggerServerAddress": "localhost:1234",
-            "preLaunchTask": "Debug: Start QEMU",
-            "postDebugTask": "stop-qemu"
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
         },
         {
             "name": "RT QEMU Debug",
@@ -50,5 +66,11 @@
             "externalConsole": false,
             "MIMode": "gdb"
         }
-    ]
+      ],
+      "targetArchitecture": "x64",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb"
+    }
+  ]
 }
