@@ -42,7 +42,7 @@ BOOT_SCR   = boot.scr
 
 # --- QEMU ---
 QEMU   = qemu-system-riscv64
-QFLAGS = -nographic -smp 3 -machine virt -cpu rv64,zba=true,zbb=true,zbc=true,zbs=true
+QFLAGS = -nographic -smp 4 -machine virt -cpu rv64,zba=true,zbb=true,zbc=true,zbs=true
 
 # --- Source Files ---
 # Assembly files
@@ -73,7 +73,8 @@ SRCS_C = \
 # Test Source Files (only included in test mode)
 TEST_SRCS_C = \
 	test/test_main.c \
-	test/test_page.c
+	test/test_page.c \
+	test/test_multicore.c
 
 # User Source Files (C)
 USER_SRCS_C = \

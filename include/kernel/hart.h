@@ -14,6 +14,30 @@
 
 #include "kernel/types.h"
 
+// 每个核心的私有数据结构
+// 使用 __attribute__((aligned(16))) 确保对齐
+struct per_cpu_data {
+    long hart_id;
+    // 未来可以添加:
+    // struct task *current_task;
+    // int scheduler_ticks;
+};
+
+// 全局的 per-CPU 数据区，汇编代码会通过名字来引用它
+extern struct per_cpu_data cpu_data_area[MAXNUM_CPU];
+
+/**
+ * @brief 获取当前核心的per_cpu_data结构体指针
+ * @return 指向当前核心per_cpu_data的指针
+ */
+static inline struct per_cpu_data* get_cpu_data(void) {
+    struct per_cpu_data *ptr;
+    // 从 tp 寄存器读取指针
+    asm volatile("mv %0, tp" : "=r"(ptr));
+    return ptr;
+}
+
+
 /**
  * @brief 启动指定的Hart并等待其进入运行状态
  * @param hartid 要启动的Hart ID

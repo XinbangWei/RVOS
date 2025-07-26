@@ -19,7 +19,9 @@
         "*.ld": "ld",
         "Makefile*": "makefile",
         "stdarg.h": "c",
-        "kernel.h": "c"
+        "kernel.h": "c",
+        "printk.h": "c",
+        "test.h": "c"
     },
     
     // 搜索和文件浏览器排除

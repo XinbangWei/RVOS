@@ -13,6 +13,17 @@
             "postDebugTask": "stop-qemu"
         },
         {
+            "name": "RT QEMU Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/os.elf",
+            "cwd": "${workspaceFolder}",
+            "miDebuggerPath": "gdb-multiarch",
+            "miDebuggerServerAddress": "localhost:1234",
+            "preLaunchTask": "Debug: Start QEMU for RT",
+            "postDebugTask": "stop-qemu"
+        },
+        {
             "name": "JTAG Debug",
             "type": "cppdbg",
             "request": "launch",

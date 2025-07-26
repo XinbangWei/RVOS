@@ -29,7 +29,7 @@
             ]
         },
         {
-            "label": "build-os",
+            "label": "Build",
             "type": "shell",
             "command": "make",
             "group": {
@@ -38,15 +38,25 @@
             }
         },
         {
-            "label": "run-os",
+            "label": "Build for RT",
             "type": "shell",
-            "command": "make run",
-            "dependsOn": ["build-os"]
+            "command": "make RUN_TEST=1"
         },
         {
             "label": "Debug: Start QEMU",
             "dependsOrder": "sequence",
             "dependsOn": [
+                "Build",
+                "stop-qemu",
+                "start-qemu-server"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Debug: Start QEMU for RT",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Build for RT",
                 "stop-qemu",
                 "start-qemu-server"
             ],

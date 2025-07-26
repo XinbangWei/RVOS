@@ -3,7 +3,7 @@
 
 #include "kernel/types.h"
 
-/* SBI function IDs */
+/* SBI function IDs (legacy) */
 #define SBI_SET_TIMER           0x00
 #define SBI_CONSOLE_PUTCHAR     0x01
 #define SBI_CONSOLE_GETCHAR     0x02
@@ -14,14 +14,16 @@
 #define SBI_REMOTE_SFENCE_VMA_ASID 0x07
 #define SBI_SHUTDOWN            0x08
 
-/* SBI HSM (Hart State Management) Extension */
+/* SBI Extension IDs */
 #define SBI_EXT_HSM             0x48534D
+
+/* SBI HSM (Hart State Management) Extension Function IDs */
 #define SBI_HSM_HART_START      0x0
 #define SBI_HSM_HART_STOP       0x1
 #define SBI_HSM_HART_GET_STATUS 0x2
 #define SBI_HSM_HART_SUSPEND    0x3
 
-/* Hart States */
+/* Hart States returned by SBI_HSM_HART_GET_STATUS */
 #define SBI_HSM_STATE_STARTED         0
 #define SBI_HSM_STATE_STOPPED         1
 #define SBI_HSM_STATE_START_PENDING   2
@@ -30,11 +32,28 @@
 #define SBI_HSM_STATE_SUSPEND_PENDING 5
 #define SBI_HSM_STATE_RESUME_PENDING  6
 
-/* SBI return codes */
+/* Standard SBI return codes */
 #define SBI_SUCCESS             0
 #define SBI_ERR_FAILURE         -1
 #define SBI_ERR_NOT_SUPPORTED   -2
 #define SBI_ERR_INVALID_PARAM   -3
+#define SBI_ERR_DENIED          -4
+#define SBI_ERR_INVALID_ADDRESS -5
+#define SBI_ERR_ALREADY_AVAILABLE -6
+#define SBI_ERR_ALREADY_STARTED -7
+#define SBI_ERR_ALREADY_STOPPED -8
+#define SBI_ERR_NO_SHMEM        -9
+
+/**
+ * @brief Structure to hold the return value of an SBI call.
+ * @details As per SBI spec, an ecall returns two values:
+ *          - error code in a0
+ *          - result value in a1
+ */
+struct sbiret {
+    long error;
+    long value;
+};
 
 /* SBI Legacy调用封装 (v0.1 - 简单直接) */
 static inline long sbi_legacy_call(long fid, long arg0, long arg1, long arg2)
@@ -52,7 +71,7 @@ static inline long sbi_legacy_call(long fid, long arg0, long arg1, long arg2)
 }
 
 /* SBI v2.0扩展调用封装 (带扩展ID) */
-static inline long sbi_ext_call(long eid, long fid, long arg0, long arg1, long arg2)
+static inline struct sbiret sbi_ext_call(long eid, long fid, long arg0, long arg1, long arg2)
 {
     register long a0 asm("a0") = arg0;
     register long a1 asm("a1") = arg1;
@@ -61,10 +80,11 @@ static inline long sbi_ext_call(long eid, long fid, long arg0, long arg1, long a
     register long a7 asm("a7") = eid;
     
     asm volatile("ecall"
-                 : "+r"(a0)
-                 : "r"(a1), "r"(a2), "r"(a6), "r"(a7)
+                 : "+r"(a0), "+r"(a1)
+                 : "r"(a2), "r"(a6), "r"(a7)
                  : "memory");
-    return a0;
+    
+    return (struct sbiret){.error = a0, .value = a1};
 }
 
 /* SBI便利函数 - Legacy接口 */
@@ -110,51 +130,29 @@ static inline uint64_t sbi_get_time(void)
 /* Get current hart ID from tp register (set by OpenSBI) */
 static inline long sbi_get_hartid(void)
 {
-    register long tp asm("tp");
-    return tp;
+    long hart_id;
+    asm volatile("mv %0, tp" : "=r"(hart_id));
+    return hart_id;
 }
 
 /* SBI HSM (Hart State Management) functions */
 
-/**
- * @brief 启动指定的Hart（CPU核心）
- * @param hartid 要启动的hart ID
- * @param start_addr 启动地址
- * @param opaque 传递给目标hart的参数
- * @return SBI_SUCCESS on success, error code on failure
- */
-static inline long sbi_hart_start(unsigned long hartid, unsigned long start_addr, unsigned long opaque)
+static inline struct sbiret sbi_hart_start(unsigned long hartid, unsigned long start_addr, unsigned long opaque)
 {
     return sbi_ext_call(SBI_EXT_HSM, SBI_HSM_HART_START, hartid, start_addr, opaque);
 }
 
-/**
- * @brief 停止当前Hart
- * @return 此函数不应返回，如果返回则表示出错
- */
-static inline long sbi_hart_stop(void)
+static inline struct sbiret sbi_hart_stop(void)
 {
     return sbi_ext_call(SBI_EXT_HSM, SBI_HSM_HART_STOP, 0, 0, 0);
 }
 
-/**
- * @brief 获取指定Hart的状态
- * @param hartid 要查询的hart ID
- * @return Hart状态值
- */
-static inline long sbi_hart_get_status(unsigned long hartid)
+static inline struct sbiret sbi_hart_get_status(unsigned long hartid)
 {
     return sbi_ext_call(SBI_EXT_HSM, SBI_HSM_HART_GET_STATUS, hartid, 0, 0);
 }
 
-/**
- * @brief 挂起当前Hart
- * @param suspend_type 挂起类型
- * @param resume_addr 恢复地址
- * @param opaque 传递给恢复函数的参数
- * @return SBI_SUCCESS on success, error code on failure
- */
-static inline long sbi_hart_suspend(unsigned long suspend_type, unsigned long resume_addr, unsigned long opaque)
+static inline struct sbiret sbi_hart_suspend(unsigned long suspend_type, unsigned long resume_addr, unsigned long opaque)
 {
     return sbi_ext_call(SBI_EXT_HSM, SBI_HSM_HART_SUSPEND, suspend_type, resume_addr, opaque);
 }

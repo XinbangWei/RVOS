@@ -12,6 +12,32 @@
 #include "kernel.h"
 #include "arch/sbi.h"
 #include "kernel/printk.h"
+#include "kernel/hart.h"
+
+// 全局的 per-CPU 数据区定义
+// 使用 __attribute__((used)) 防止编译器优化掉未在C代码中显式使用的全局变量
+// 汇编代码 (start.S) 会直接通过名字引用这个数组
+struct per_cpu_data cpu_data_area[MAXNUM_CPU] __attribute__((aligned(16), used));
+
+/**
+ * @brief 获取指定Hart的状态
+ * @param hartid 要查询的Hart ID
+ * @return Hart状态值，或负数表示错误
+ * @note 内部函数，直接返回SBI调用的结果
+ */
+long do_hart_get_status(unsigned long hartid)
+{
+    if (hartid >= MAXNUM_CPU) {
+        printk("Hart: Invalid Hart ID %lu (max: %d)\n", hartid, MAXNUM_CPU - 1);
+        return SBI_ERR_INVALID_PARAM;
+    }
+    
+    struct sbiret ret = sbi_hart_get_status(hartid);
+    if (ret.error != SBI_SUCCESS) {
+        return ret.error;
+    }
+    return ret.value;
+}
 
 /**
  * @brief 启动指定的Hart并等待其进入运行状态
@@ -22,8 +48,6 @@
  */
 int hart_start(unsigned long hartid, unsigned long start_addr, unsigned long opaque)
 {
-    long ret;
-    
     // 检查Hart ID是否有效
     if (hartid >= MAXNUM_CPU) {
         printk("Hart: Invalid Hart ID %lu (max: %d)\n", hartid, MAXNUM_CPU - 1);
@@ -31,26 +55,34 @@ int hart_start(unsigned long hartid, unsigned long start_addr, unsigned long opa
     }
     
     // 检查目标Hart是否已经在运行
-    ret = sbi_hart_get_status(hartid);
-    if (ret == SBI_HSM_STATE_STARTED) {
+    long status = do_hart_get_status(hartid);
+    if (status < 0) {
+        printk("Hart: Failed to get status for Hart %lu, error: %ld\n", hartid, status);
+        return -1;
+    }
+    if (status == SBI_HSM_STATE_STARTED) {
         printk("Hart: Hart %lu is already running\n", hartid);
         return 0;  // 已经启动，返回成功
+    }
+    if (status != SBI_HSM_STATE_STOPPED) {
+        printk("Hart: Hart %lu is not in STOPPED state (current: %ld), cannot start.\n", hartid, status);
+        return -1;
     }
     
     printk("Hart: Starting Hart %lu at address 0x%lx\n", hartid, start_addr);
     
     // 启动目标Hart
-    ret = sbi_hart_start(hartid, start_addr, opaque);
-    if (ret != SBI_SUCCESS) {
-        printk("Hart: Failed to start Hart %lu, error code: %ld\n", hartid, ret);
-        return (int)ret;
+    struct sbiret ret = sbi_hart_start(hartid, start_addr, opaque);
+    if (ret.error != SBI_SUCCESS) {
+        printk("Hart: Failed to start Hart %lu, error code: %ld\n", hartid, ret.error);
+        return (int)ret.error;
     }
     
     // 等待Hart启动完成
     int timeout = 1000000;  // 简单的超时计数器
     while (timeout-- > 0) {
-        ret = sbi_hart_get_status(hartid);
-        if (ret == SBI_HSM_STATE_STARTED) {
+        status = do_hart_get_status(hartid);
+        if (status == SBI_HSM_STATE_STARTED) {
             printk("Hart: Hart %lu started successfully\n", hartid);
             return 0;
         }
@@ -75,10 +107,10 @@ int hart_stop_self(void)
     printk("Hart: Stopping current Hart %ld\n", hartid);
     
     // 调用SBI HSM停止当前Hart
-    long ret = sbi_hart_stop();
+    struct sbiret ret = sbi_hart_stop();
     
     // 如果我们到达这里，说明SBI HSM停止失败
-    printk("Hart: Failed to stop Hart %ld, error code: %ld\n", hartid, ret);
+    printk("Hart: Failed to stop Hart %ld, error code: %ld\n", hartid, ret.error);
     printk("Hart: Falling back to WFI loop\n");
     
     // 回退到WFI循环
@@ -86,22 +118,7 @@ int hart_stop_self(void)
         asm volatile("wfi");
     }
     
-    return (int)ret;  // 理论上不会到达这里
-}
-
-/**
- * @brief 获取指定Hart的状态
- * @param hartid 要查询的Hart ID
- * @return Hart状态值，或负数表示错误
- */
-long do_hart_get_status(unsigned long hartid)
-{
-    if (hartid >= MAXNUM_CPU) {
-        printk("Hart: Invalid Hart ID %lu (max: %d)\n", hartid, MAXNUM_CPU - 1);
-        return -1;
-    }
-    
-    return sbi_hart_get_status(hartid);
+    return (int)ret.error;  // 理论上不会到达这里
 }
 
 /**
@@ -127,7 +144,7 @@ static const char* hart_get_status_name(long status)
         case SBI_HSM_STATE_RESUME_PENDING:
             return "RESUMING";
         default:
-            return "UNKNOWN";
+            return "UNKNOWN/ERROR";
     }
 }
 
@@ -166,11 +183,11 @@ int hart_suspend_self(unsigned long suspend_type, unsigned long resume_addr, uns
     printk("Hart: Suspending Hart %ld (type: %lu, resume at: 0x%lx)\n", 
            hartid, suspend_type, resume_addr);
     
-    long ret = sbi_hart_suspend(suspend_type, resume_addr, opaque);
+    struct sbiret ret = sbi_hart_suspend(suspend_type, resume_addr, opaque);
     
-    if (ret != SBI_SUCCESS) {
-        printk("Hart: Failed to suspend Hart %ld, error code: %ld\n", hartid, ret);
-        return (int)ret;
+    if (ret.error != SBI_SUCCESS) {
+        printk("Hart: Failed to suspend Hart %ld, error code: %ld\n", hartid, ret.error);
+        return (int)ret.error;
     }
     
     // 如果挂起成功，当Hart恢复时会从这里继续执行
